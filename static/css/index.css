@@ -1,0 +1,629 @@
+/* -------------------------------------------------------------------------- */
+/*                                   GENERAL                                  */
+/* -------------------------------------------------------------------------- */
+:root {
+	--bgDark: #0b0d12;
+	--panelBg: rgba(22, 27, 34, 0.95);
+	--accentPrimary: #00ffcc;
+	--accentSecondary: #ffae00;
+	--accentDanger: #ff3366;
+	--textMain: #e6edf3;
+	--textMuted: #8b949e;
+	--borderStyle: 1px solid rgba(255, 255, 255, 0.1);
+	--glassEffect: blur(12px);
+	--fontMono: "Courier New", Courier, monospace;
+	--fontSans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	background-color: var(--bgDark);
+	color: var(--textMain);
+	display: flex;
+	font-family: var(--fontSans);
+	height: 100vh;
+	overflow: hidden;
+}
+
+/* -------------------------------- SCROLLBAR ------------------------------- */
+::-webkit-scrollbar {
+	width: 6px;
+}
+
+::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	background: #30363d;
+	border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--accentPrimary);
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                   SIDEBAR                                  */
+/* -------------------------------------------------------------------------- */
+aside {
+	backdrop-filter: var(--glassEffect);
+	background: var(--panelBg);
+	border-right: var(--borderStyle);
+	display: flex;
+	flex-direction: column;
+	position: relative;
+	transition: transform 0.3s ease, width 0.3s ease;
+	width: 380px;
+	z-index: 1000;
+}
+
+aside.collapsed {
+	overflow: hidden;
+	transform: translateX(-100%);
+	width: 0;
+}
+
+.sidebarHeader {
+	align-items: center;
+	border-bottom: var(--borderStyle);
+	display: flex;
+	justify-content: space-between;
+	padding: 20px;
+	white-space: nowrap;
+}
+
+.sidebarHeader h1 {
+	font-size: 1.2rem;
+	font-weight: 700;
+	letter-spacing: 1px;
+}
+
+.sidebarHeader span {
+	font-size: 0.7rem;
+	color: var(--textMuted);
+}
+
+.toggleButton {
+	background: transparent;
+	border: 1px solid var(--accentPrimary);
+	color: var(--accentPrimary);
+	width: 30px;
+	height: 30px;
+	border-radius: 4px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s;
+}
+
+.toggleButton:hover {
+	background: rgba(0, 255, 204, 0.1);
+}
+
+#reopenSidebarButton {
+	position: absolute;
+	top: 20px;
+	left: 20px;
+	z-index: 2000;
+	display: none;
+	background: var(--bgDark);
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.robotList {
+	flex: 1;
+	overflow-y: auto;
+	padding: 20px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.listHeader {
+	color: var(--textMuted);
+}
+
+.listSection {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.sectionDivider {
+	height: 1px;
+	background: linear-gradient(90deg, transparent, var(--accentPrimary), transparent);
+	margin: 10px 0;
+	opacity: 0.5;
+	display: none;
+}
+
+/* Empty state box */
+.emptyStateBox {
+	border: 1px dashed var(--textMuted);
+	border-radius: 6px;
+	padding: 20px;
+	text-align: center;
+	color: var(--textMuted);
+	font-size: 0.8rem;
+	background: rgba(255, 255, 255, 0.02);
+	font-family: var(--fontMono);
+}
+
+/* --- ROBOT CARD --- */
+.robotCard {
+	background: rgba(255, 255, 255, 0.03);
+	border: var(--borderStyle);
+	padding: 15px;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), background 0.2s;
+	position: relative;
+	overflow: hidden;
+	animation: slideIn 0.3s ease-out forwards;
+}
+
+@keyframes slideIn {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.robotCard:hover {
+	background: rgba(255, 255, 255, 0.07);
+	border-color: rgba(255, 255, 255, 0.2);
+}
+
+.robotCard.highlighted {
+	background: rgba(0, 255, 204, 0.15);
+	border: 1px solid var(--accentPrimary);
+	box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
+}
+
+.cardTop {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 8px;
+}
+
+.robotId {
+	font-family: var(--fontMono);
+	font-weight: bold;
+}
+
+.connectionStatus {
+	font-size: 0.75rem;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background-color: #555;
+}
+
+.dot.connected {
+	background-color: var(--accentPrimary);
+	box-shadow: 0 0 8px var(--accentPrimary);
+}
+
+.dot.pairing {
+	background-color: var(--accentSecondary);
+	animation: blink 1s infinite;
+}
+
+.dot.working {
+	background-color: var(--accentSecondary);
+}
+
+.dot.manual {
+	background-color: var(--accentDanger);
+	box-shadow: 0 0 8px var(--accentDanger);
+	animation: blink 0.5s infinite;
+}
+
+@keyframes blink {
+	50% {
+		opacity: 0.4;
+	}
+}
+
+.cardStats {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 4px;
+	font-size: 0.75rem;
+	color: var(--textMuted);
+	margin-top: 10px;
+	opacity: 0.4;
+	transition: opacity 0.5s;
+}
+
+.robotCard.connected .cardStats {
+	opacity: 1;
+}
+
+.statRow {
+	display: flex;
+	justify-content: space-between;
+}
+
+.statVal {
+	color: var(--textMain);
+	font-family: var(--fontMono);
+}
+
+.actionButton {
+	width: 100%;
+	margin-top: 10px;
+	padding: 8px;
+	background: transparent;
+	border: 1px solid var(--accentPrimary);
+	color: var(--accentPrimary);
+	font-family: var(--fontMono);
+	font-size: 0.75rem;
+	cursor: pointer;
+	text-transform: uppercase;
+	border-radius: 4px;
+	transition: 0.2s;
+	display: block;
+}
+
+.actionButton:hover {
+	background: rgba(0, 255, 204, 0.1);
+}
+
+.robotCard.connected .actionButton {
+	display: none;
+}
+
+/* --- CONTEXT MENU --- */
+#contextMenu {
+	position: absolute;
+	background: var(--bgDark);
+	border: 1px solid var(--accentPrimary);
+	border-radius: 4px;
+	padding: 5px 0;
+	width: 200px;
+	z-index: 9999;
+	display: none;
+	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+	backdrop-filter: blur(5px);
+}
+
+.ctxItem {
+	padding: 8px 15px;
+	font-size: 0.8rem;
+	color: var(--textMain);
+	cursor: pointer;
+	transition: background 0.2s;
+}
+
+.ctxItem:hover {
+	background: rgba(0, 255, 204, 0.2);
+}
+
+.ctxDivider:not(:last-child) {
+	height: 1px;
+	background: rgba(255, 255, 255, 0.1);
+	margin: 4px 0;
+}
+
+/* --- TELEOPERATION MODAL --- */
+.teleopOverlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.6);
+	z-index: 6000;
+	display: none;
+	justify-content: center;
+	align-items: center;
+}
+
+.teleopModal {
+	width: 85vw;
+	height: 85vh;
+	background: rgba(22, 27, 34, 0.85); /* See-through */
+	backdrop-filter: blur(8px);
+	border: 1px solid var(--accentPrimary);
+	border-radius: 12px;
+	display: flex;
+	flex-direction: column;
+	box-shadow: 0 0 50px rgba(0, 255, 204, 0.1);
+	position: relative;
+}
+
+.teleopHeader {
+	padding: 15px 25px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.teleopHeaderText h2 {
+	color: var(--accentPrimary);
+}
+
+.teleopHeaderText span {
+	font-family: var(--fontMono);
+	color: var(--textMuted);
+}
+
+.teleopBody {
+	flex: 1;
+	display: flex;
+	padding: 20px;
+	gap: 20px;
+}
+
+.cameraFeed {
+	flex: 2;
+	background: #000;
+	border: 1px solid #333;
+	border-radius: 8px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	overflow: hidden;
+	position: relative;
+}
+
+.cameraFeed img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	opacity: 0.8;
+}
+
+.teleopControls {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.teleopControlsStats {
+	background: rgba(0, 0, 0, 0.3);
+	padding: 15px;
+	border-radius: 8px;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.keyPad {
+	display: grid;
+	grid-template-columns: 60px 60px 60px;
+	gap: 5px;
+	justify-content: center;
+	margin: 20px 0;
+}
+
+.key {
+	width: 60px;
+	height: 60px;
+	border: 1px solid #555;
+	border-radius: 6px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	font-weight: bold;
+	color: #888;
+	transition: 0.1s;
+}
+
+.key.active {
+	background: var(--accentPrimary);
+	color: #000;
+	border-color: var(--accentPrimary);
+	box-shadow: 0 0 15px var(--accentPrimary);
+}
+
+.keyUp {
+	grid-column: 2;
+}
+
+.keyLeft {
+	grid-column: 1;
+	grid-row: 2;
+}
+
+.keyDown {
+	grid-column: 2;
+	grid-row: 2;
+}
+
+.keyRight {
+	grid-column: 3;
+	grid-row: 2;
+}
+
+.controlActions {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px;
+}
+
+.teleopActionButton {
+	padding: 12px;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid #555;
+	color: white;
+	cursor: pointer;
+	border-radius: 4px;
+	font-size: 0.8rem;
+	transition: 0.2s;
+}
+
+.teleopActionButton:hover {
+	background: rgba(255, 255, 255, 0.1);
+}
+
+.teleopActionButton.danger {
+	border-color: var(--accentDanger);
+	color: var(--accentDanger);
+}
+
+.teleopActionButton.primary {
+	border-color: var(--accentPrimary);
+	color: var(--accentPrimary);
+}
+
+/* -------------------------------------------------------------------------- */
+/*                               MAP AND DRAWING                              */
+/* -------------------------------------------------------------------------- */
+main {
+	flex: 1;
+	position: relative;
+	background-color: #000;
+}
+
+#map {
+	width: 100%;
+	height: 100%;
+	z-index: 1;
+}
+
+.leaflet-container {
+	background: #161b22;
+	font-family: var(--fontSans);
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+	background: var(--bgDark);
+	color: var(--textMain);
+	border: 1px solid var(--accentPrimary);
+}
+
+/* Move draw controls to right */
+.leaflet-right .leaflet-control {
+	float: right;
+	clear: right;
+}
+
+.leaflet-draw-toolbar a {
+	background-color: var(--panelBg);
+	border-color: var(--borderStyle);
+	color: white;
+}
+
+/* Modal for precision zone */
+.precisionZoneOverlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.7);
+	backdrop-filter: blur(3px);
+	z-index: 5000;
+	display: none;
+	justify-content: center;
+	align-items: center;
+}
+
+.precisionZoneModal {
+	background: #161b22;
+	border: 1px solid var(--accentPrimary);
+	width: 400px;
+	border-radius: 8px;
+	padding: 20px;
+	box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+}
+
+.precisionZoneHeader {
+	display: flex;
+	justify-content: space-between;
+	margin-bottom: 15px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	padding-bottom: 10px;
+}
+
+.precisionZoneHeader>button {
+	width: 20px;
+	height: 20px;
+}
+
+.precisionZoneTabSelectorContainer {
+	display: flex;
+	gap: 10px;
+	margin-bottom: 15px;
+}
+
+.tabButton {
+	background: transparent;
+	border: 1px solid #333;
+	color: var(--textMuted);
+	padding: 5px 10px;
+	font-size: 0.75rem;
+	cursor: pointer;
+	flex: 1;
+}
+
+.tabButton.active {
+	background: var(--accentPrimary);
+	color: #000;
+	font-weight: bold;
+	border-color: var(--accentPrimary);
+}
+
+.precisionZoneTabContent {
+	display: none;
+}
+
+.precisionZoneTabContent.active {
+	display: block;
+}
+
+.inputGroup {
+	margin-bottom: 10px;
+}
+
+.inputGroup label {
+	display: block;
+	font-size: 0.7rem;
+	color: var(--textMuted);
+	margin-bottom: 4px;
+}
+
+.inputGroup input,
+.inputGroup select {
+	width: 100%;
+	background: #0b0d12;
+	border: 1px solid #333;
+	color: white;
+	padding: 8px;
+	font-family: var(--fontMono);
+	font-size: 0.8rem;
+}
+
+.inputRow {
+	display: flex;
+	gap: 10px;
+}
+
+.precisionZoneActions {
+	margin-top: 20px;
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+}

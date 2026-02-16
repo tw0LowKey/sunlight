@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Sunlight</title>
+	
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/libraries/leaflet.css') }}"></script>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/libraries/leaflet.draw.css') }}"></script>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+
+	<meta name="description" content="">
+	<meta property="og:title" content="Sunlight">
+	<meta property="og:type" content="website">
+	<meta property="og:url" content="">
+	<meta property="og:image" content="">
+	<meta property="og:image:alt" content="">
+
+	<!-- <link rel="icon" href="{{ url_for('static', filename='images/icon/icon.png') }}" sizes="any"> -->
+</head>
+
+<body>
+	<script src="{{ url_for('static', filename='js/libraries/leaflet.js') }}"></script>
+	<script src="{{ url_for('static', filename='js/libraries/leaflet.draw.js') }}"></script>
+
+	<div id="contextMenu"></div>
+
+    <div class="teleopOverlay" id="teleopOverlay">
+        <div class="teleopModal">
+            <div class="teleopHeader">
+                <div class="teleopHeaderText">
+                    <h2>REMOTE OVERRIDE</h2>
+                    <span id="teleopRobotID">Unit: R-000</span>
+                </div>
+                <button class="toggleButton" id="closeTeleopButton">&times;</button>
+            </div>
+
+            <div class="teleopBody">
+                <div class="cameraFeed">
+                    <!-- <img src="" alt="Robot Feed"> -->
+                </div>
+                
+                <div class="teleopControls">
+                    <div class="teleopControlsStats">
+                        <div class="statRow"><span>BATTERY</span> <span class="statVal" id="teleBatt">--%</span></div>
+                        <div class="statRow"><span>LAT/LNG</span> <span class="statVal" id="teleLoc">--</span></div>
+                        <div class="statRow"><span>STATUS</span> <span class="statVal" id="teleStatus">MANUAL</span></div>
+                    </div>
+
+                    <div class="keyPad">
+                        <div class="key keyUp" id="k-ArrowUp">↑</div>
+                        <div class="key keyLeft" id="k-ArrowLeft">←</div>
+                        <div class="key keyDown" id="k-ArrowDown">↓</div>
+                        <div class="key keyRight" id="k-ArrowRight">→</div>
+                    </div>
+
+                    <div class="controlActions">
+                        <button class="teleopActionButton primary" id="teleopResumeAutoButton">RESUME AUTO</button>
+                        <button class="teleopActionButton" id="teleopToggleArmButton">TOGGLE ARM</button>
+                        <button class="teleopActionButton danger" id="teleopSoundBeeperButton">SOUND BEEPER</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="precisionZoneOverlay" id="precisionZoneOverlay">
+        <div class="precisionZoneModal">
+            <div class="precisionZoneHeader">
+                <h3>Precision Zone</h3>
+                <button class="toggleButton" id="closePrecisionZoneModal">&times;</button>
+            </div>
+            
+            <div class="precisionZoneTabSelectorContainer" id="precisionZoneTabSelectorContainer">
+                <button class="tabButton active" id="precisionZoneTab1Selector">Coordinates</button>
+                <button class="tabButton" id="precisionZoneTab2Selector">Dimensions</button>
+                <button class="tabButton" id="precisionZoneTab3Selector">Center on Me</button>
+            </div>
+
+            <div class="precisionZoneTabContent active" id="precisionZoneTab1">
+                <div class="inputRow">
+                    <div class="inputGroup"><label>Top-Left Latitude</label><input type="number" step="0.0001" id="topLeftLat"></div>
+                    <div class="inputGroup"><label>Top-Left Longitude</label><input type="number" step="0.0001" id="topLeftLng"></div>
+                </div>
+                <div class="inputRow">
+                    <div class="inputGroup"><label>Bottom-Right Latitude</label><input type="number" step="0.0001" id="bottomRightLat"></div>
+                    <div class="inputGroup"><label>Bottom-Right Longitude</label><input type="number" step="0.0001" id="bottomRightLng"></div>
+                </div>
+            </div>
+
+            <div class="precisionZoneTabContent" id="precisionZoneTab2">
+                <div class="inputRow">
+                    <div class="inputGroup"><label>Anchor Latitude</label><input type="number" step="0.0001" id="anchorLat" value="53.532207959312"></div>
+                    <div class="inputGroup"><label>Anchor Longitude</label><input type="number" step="0.0001" id="anchorLng" value="-2.264914510485"></div>
+                </div>
+                <div class="inputRow">
+                    <div class="inputGroup"><label>Vertical Origin</label><select id="anchorV"><option value="top">Top</option><option value="bottom">Bottom</option></select></div>
+                    <div class="inputGroup"><label>Horizontal Origin</label><select id="anchorH"><option value="left">Left</option><option value="right">Right</option></select></div>
+                </div>
+                <div class="inputRow">
+                    <div class="inputGroup"><label>Height (m)</label><input type="number" id="dimHeight" value="200"></div>
+                    <div class="inputGroup"><label>Width (m)</label><input type="number" id="dimWidth" value="200"></div>
+                </div>
+            </div>
+
+            <div class="precisionZoneTabContent" id="precisionZoneTab3">
+                <div class="inputRow">
+                    <div class="inputGroup"><label>Box Height (m)</label><input type="number" id="meHeight" value="100"></div>
+                    <div class="inputGroup"><label>Box Width (m)</label><input type="number" id="meWidth" value="100"></div>
+                </div>
+            </div>
+
+            <div class="precisionZoneActions">
+                <button class="actionButton" id="createPrecisionZoneButton">CREATE ZONE</button>
+            </div>
+        </div>
+    </div>
+
+    <button class="toggleButton" id="reopenSidebarButton">&#9776;</button>
+
+    <aside id="sidebarPanel">
+        <div class="sidebarHeader">
+            <div>
+                <h1>SUNLIGHT</h1>
+                <span>FLEET COMMAND v{{ version }}</span>
+            </div>
+            <button class="toggleButton" id="closeSidebarButton">&#10005;</button>
+        </div>
+
+        <div class="robotList">
+            <div class="listHeader" id="listHeaderTitle">NO ACTIVE ZONE SELECTED</div>
+            <div class="listSection" id="activeList"></div>
+            <div class="sectionDivider" id="zoneDivider"></div>
+            <div class="listSection" id="inactiveList"></div>
+        </div>
+    </aside>
+
+    <main>
+        <div id="map"></div>
+    </main>
+
+	<script type="text/javascript" src="{{ url_for('static', filename='js/index.js') }}"></script>
+</body>
+
+</html>
