@@ -73,16 +73,10 @@ aside {
 	border-right: var(--borderStyle);
 	display: flex;
 	flex-direction: column;
+	flex-shrink: 0;
 	position: relative;
-	transition: transform 0.3s ease, width 0.3s ease;
 	width: 380px;
 	z-index: 1000;
-}
-
-aside.collapsed {
-	overflow: hidden;
-	transform: translateX(-100%);
-	width: 0;
 }
 
 .sidebarHeader {
@@ -166,16 +160,6 @@ body.light-mode .icon-moon {
 
 #themeToggleButton:hover svg {
 	filter: drop-shadow(0 0 3px var(--accentPrimary));
-}
-
-#reopenSidebarButton {
-	position: absolute;
-	top: 20px;
-	left: 20px;
-	z-index: 2000;
-	display: none;
-	background: var(--bgDark);
-	box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
 .robotList {

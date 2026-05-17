@@ -47,8 +47,6 @@ let zones = [];
 const activeList = document.getElementById("activeList");
 const inactiveList = document.getElementById("inactiveList");
 const zoneDivider = document.getElementById("zoneDivider");
-const sidebar = document.getElementById("sidebarPanel");
-const reopenButton = document.getElementById("reopenSidebarButton");
 const listHeader = document.getElementById("listHeaderTitle");
 const contextMenu = document.getElementById("contextMenu");
 const themeToggleButton = document.getElementById("themeToggleButton");
@@ -480,15 +478,6 @@ function updateRobotCard(card, r, index, isActive) {
 	}
 }
 
-function toggleSidebar() {
-	sidebar.classList.toggle("collapsed");
-	reopenButton.style.display = sidebar.classList.contains("collapsed") ? "flex" : "none";
-
-	setTimeout(() => {
-		map.invalidateSize();
-	}, 300);
-}
-
 function createRobotCard(r, index, isActive) {
 	const card = document.createElement("div");
 	card.className = `robotCard ${r.connected ? "connected" : "unpaired"} ${isActive ? "highlighted" : ""}`;
@@ -813,15 +802,6 @@ function setupTeleopArrowListeners() {
 	// Precision zone actions
 	document.getElementById("createPrecisionZoneButton").addEventListener("click", () => {
 		createPrecisionZone();
-	});
-
-	// Side panel toggling
-	document.getElementById("closeSidebarButton").addEventListener("click", () => {
-		toggleSidebar();
-	});
-
-	document.getElementById("reopenSidebarButton").addEventListener("click", () => {
-		toggleSidebar();
 	});
 }
 
