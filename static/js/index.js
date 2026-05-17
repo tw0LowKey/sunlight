@@ -90,15 +90,15 @@ function setupThemeToggle() {
 		const isLight = document.body.classList.contains("light-mode");
 
 		// Update Map Tiles
-		const newUrl = isLight 
+		const newUrl = isLight
 			? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
 			: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-		
+
 		tileLayer.setUrl(newUrl);
 
 		// Update accent colors for JS-driven components
 		accentPrimary = isLight ? "#006d56" : "#00ffcc";
-		
+
 		// Update existing markers and drawings
 		updateMapMarkers();
 		drawnItems.eachLayer(layer => {
@@ -610,7 +610,7 @@ function showContextMenu(x, y, robotIndex) {
 	contextMenu.innerHTML += `<div class="ctxDivider"></div>`;
 
 	if (r.connected) {
-		contextMenu.innerHTML += `<div class="ctxItem" onclick="openTeleop(${robotIndex})">Teleoperate</div>`;
+		contextMenu.innerHTML += `<div class="ctxItem" onclick="openTeleop(${robotIndex})">Remote Control</div>`;
 	}
 
 	if (selectedZoneId && r.zoneId !== selectedZoneId) {
@@ -701,7 +701,7 @@ function openTeleop(index) {
 	const r = robots[index];
 
 	if (!r.connected) {
-		alert("Cannot teleoperate disconnected unit");
+		alert("Cannot manually control disconnected unit");
 		return;
 	}
 
