@@ -31,11 +31,12 @@ socket.on("robot_update", (data) => {
 	renderSidebar();
 });
 
-const accentPrimary = "#00ffcc";
-const accentSecondary = "#ffae00";
-const accentDanger = "#ff3366";
+let accentPrimary = "#00ffcc";
+let accentSecondary = "#ffae00";
+let accentDanger = "#ff3366";
 let drawnItems;
 let map;
+let tileLayer;
 let selectedZoneId = null;
 let startLat = 53.52902931948096;
 let startLng = -2.2629539937033964;
@@ -50,6 +51,7 @@ const sidebar = document.getElementById("sidebarPanel");
 const reopenButton = document.getElementById("reopenSidebarButton");
 const listHeader = document.getElementById("listHeaderTitle");
 const contextMenu = document.getElementById("contextMenu");
+const themeToggleButton = document.getElementById("themeToggleButton");
 
 /* -------------------------------------------------------------------------- */
 /*                                    INIT                                    */
@@ -77,6 +79,37 @@ function init() {
 	});
 
 	setupTeleopArrowListeners();
+	setupThemeToggle();
+}
+
+function setupThemeToggle() {
+	if (!themeToggleButton) return;
+
+	themeToggleButton.addEventListener("click", () => {
+		document.body.classList.toggle("light-mode");
+		const isLight = document.body.classList.contains("light-mode");
+
+		// Update Map Tiles
+		const newUrl = isLight 
+			? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+			: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+		
+		tileLayer.setUrl(newUrl);
+
+		// Update accent colors for JS-driven components
+		accentPrimary = isLight ? "#006d56" : "#00ffcc";
+		
+		// Update existing markers and drawings
+		updateMapMarkers();
+		drawnItems.eachLayer(layer => {
+			if (layer.setStyle) {
+				layer.setStyle({ color: accentPrimary });
+			}
+		});
+
+		// Refresh sidebar to update any color-dependent text
+		renderSidebar();
+	});
 }
 
 /* -------------------------------------------------------------------------- */
@@ -91,7 +124,7 @@ function initMap() {
 
 	L.control.zoom({ position: "topright" }).addTo(map);
 
-	L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+	tileLayer = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
 		attribution: "&copy; OpenStreetMap &copy; CARTO",
 		subdomains: "abcd",
 		maxZoom: 19
@@ -224,8 +257,11 @@ function selectZone(id, layer) {
 	listHeader.innerText = `ACTIVE: ${id}`;
 	listHeader.style.color = "var(--accentPrimary)";
 
+	const isLight = document.body.classList.contains("light-mode");
+	const selectionColor = isLight ? "#000" : "#fff";
+
 	drawnItems.eachLayer(l => l.setStyle({ color: accentPrimary, dashArray: null }));
-	layer.setStyle({ color: "#fff", dashArray: "5, 5" });
+	layer.setStyle({ color: selectionColor, dashArray: "5, 5" });
 	layer.bindPopup(`
 		<div style="font-family: monospace;">
 			<strong>${id}</strong><br>

@@ -8,11 +8,26 @@
 	--accentSecondary: #ffae00;
 	--accentDanger: #ff3366;
 	--textMain: #e6edf3;
-	--textMuted: #8b949e;
-	--borderStyle: 1px solid rgba(255, 255, 255, 0.1);
+	--textMuted: #9ba3af; /* Slightly brighter for dark mode contrast */
+	--borderStyle: 1px solid rgba(255, 255, 255, 0.2); /* Increased contrast */
 	--glassEffect: blur(12px);
 	--fontMono: "Courier New", Courier, monospace;
 	--fontSans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+	--cardBg: rgba(255, 255, 255, 0.03);
+	--cardHoverBg: rgba(255, 255, 255, 0.07);
+	--inputBg: #0b0d12;
+}
+
+body.light-mode {
+	--bgDark: #d1d5db; /* Darker gray background */
+	--panelBg: rgba(243, 244, 246, 0.95); /* Slate 100 */
+	--textMain: #111827; /* Near black */
+	--textMuted: #374151; /* Slate 700 */
+	--borderStyle: 1px solid rgba(0, 0, 0, 0.25); /* Stronger borders */
+	--accentPrimary: #006d56; /* Even deeper green for contrast on gray */
+	--cardBg: #f9fafb; /* Slate 50 */
+	--cardHoverBg: #e5e7eb; /* Slate 200 */
+	--inputBg: #ffffff;
 }
 
 * {
@@ -40,8 +55,9 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-	background: #30363d;
+	background: var(--textMuted);
 	border-radius: 3px;
+	opacity: 0.5;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -78,6 +94,11 @@ aside.collapsed {
 	white-space: nowrap;
 }
 
+.sidebarHeaderRight {
+	display: flex;
+	gap: 8px;
+}
+
 .sidebarHeader h1 {
 	font-size: 1.2rem;
 	font-weight: 700;
@@ -105,6 +126,46 @@ aside.collapsed {
 
 .toggleButton:hover {
 	background: rgba(0, 255, 204, 0.1);
+}
+
+body.light-mode .toggleButton:hover {
+	background: rgba(0, 138, 109, 0.1);
+}
+
+#themeToggleButton {
+	position: relative;
+	overflow: hidden;
+}
+
+#themeToggleButton svg {
+	position: absolute;
+	width: 16px;
+	height: 16px;
+	transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.icon-moon {
+	opacity: 0;
+	transform: scale(0.5) rotate(45deg);
+}
+
+.icon-sun {
+	opacity: 1;
+	transform: scale(1) rotate(0);
+}
+
+body.light-mode .icon-sun {
+	opacity: 0;
+	transform: scale(0.5) rotate(-45deg);
+}
+
+body.light-mode .icon-moon {
+	opacity: 1;
+	transform: scale(1) rotate(0);
+}
+
+#themeToggleButton:hover svg {
+	filter: drop-shadow(0 0 3px var(--accentPrimary));
 }
 
 #reopenSidebarButton {
@@ -152,13 +213,13 @@ aside.collapsed {
 	text-align: center;
 	color: var(--textMuted);
 	font-size: 0.8rem;
-	background: rgba(255, 255, 255, 0.02);
+	background: var(--cardBg);
 	font-family: var(--fontMono);
 }
 
 /* --- ROBOT CARD --- */
 .robotCard {
-	background: rgba(255, 255, 255, 0.03);
+	background: var(--cardBg);
 	border: var(--borderStyle);
 	padding: 15px;
 	border-radius: 6px;
@@ -193,8 +254,12 @@ aside.collapsed {
 }
 
 .robotCard:hover {
-	background: rgba(255, 255, 255, 0.07);
+	background: var(--cardHoverBg);
 	border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.light-mode .robotCard:hover {
+	border-color: rgba(0, 0, 0, 0.1);
 }
 
 .robotCard.highlighted {
@@ -206,6 +271,11 @@ aside.collapsed {
 .robotCard.removing {
 	animation: slideOut 0.3s ease-in forwards;
 	pointer-events: none;
+}
+
+body.light-mode .robotCard.highlighted {
+	background: rgba(0, 138, 109, 0.15);
+	box-shadow: 0 0 15px rgba(0, 138, 109, 0.2);
 }
 
 .cardTop {
@@ -379,7 +449,7 @@ aside.collapsed {
 .teleopModal {
 	width: 85vw;
 	height: 85vh;
-	background: rgba(22, 27, 34, 0.85); /* See-through */
+	background: var(--panelBg); /* See-through */
 	backdrop-filter: blur(8px);
 	border: 1px solid var(--accentPrimary);
 	border-radius: 12px;
@@ -389,12 +459,20 @@ aside.collapsed {
 	position: relative;
 }
 
+body.light-mode .teleopModal {
+	box-shadow: 0 0 50px rgba(0, 138, 109, 0.1);
+}
+
 .teleopHeader {
 	padding: 15px 25px;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	border-bottom: var(--borderStyle);
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
+}
+
+body.light-mode .teleopHeader {
+	border-bottom: var(--borderStyle);
 }
 
 .teleopHeaderText h2 {
@@ -440,10 +518,14 @@ aside.collapsed {
 }
 
 .teleopControlsStats {
-	background: rgba(0, 0, 0, 0.3);
+	background: var(--bgDark);
 	padding: 15px;
 	border-radius: 8px;
-	border: 1px solid rgba(255, 255, 255, 0.1);
+	border: var(--borderStyle);
+}
+
+body.light-mode .teleopControlsStats {
+	border: var(--borderStyle);
 }
 
 .keyPad {
@@ -501,9 +583,9 @@ aside.collapsed {
 
 .teleopActionButton {
 	padding: 12px;
-	background: rgba(255, 255, 255, 0.05);
+	background: var(--cardBg);
 	border: 1px solid #555;
-	color: white;
+	color: var(--textMain);
 	cursor: pointer;
 	border-radius: 4px;
 	font-size: 0.8rem;
@@ -511,7 +593,7 @@ aside.collapsed {
 }
 
 .teleopActionButton:hover {
-	background: rgba(255, 255, 255, 0.1);
+	background: var(--cardHoverBg);
 }
 
 .teleopActionButton.danger {
@@ -530,7 +612,7 @@ aside.collapsed {
 main {
 	flex: 1;
 	position: relative;
-	background-color: #000;
+	background-color: var(--bgDark);
 }
 
 #map {
@@ -540,7 +622,7 @@ main {
 }
 
 .leaflet-container {
-	background: #161b22;
+	background: var(--bgDark);
 	font-family: var(--fontSans);
 }
 
@@ -560,7 +642,7 @@ main {
 .leaflet-draw-toolbar a {
 	background-color: var(--panelBg);
 	border-color: var(--borderStyle);
-	color: white;
+	color: var(--textMain);
 }
 
 /* Modal for precision zone */
@@ -579,7 +661,7 @@ main {
 }
 
 .precisionZoneModal {
-	background: #161b22;
+	background: var(--panelBg);
 	border: 1px solid var(--accentPrimary);
 	width: 400px;
 	border-radius: 8px;
@@ -591,8 +673,12 @@ main {
 	display: flex;
 	justify-content: space-between;
 	margin-bottom: 15px;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	border-bottom: var(--borderStyle);
 	padding-bottom: 10px;
+}
+
+body.light-mode .precisionZoneHeader {
+	border-bottom: var(--borderStyle);
 }
 
 .precisionZoneHeader>button {
@@ -645,12 +731,17 @@ main {
 .inputGroup input,
 .inputGroup select {
 	width: 100%;
-	background: #0b0d12;
+	background: var(--inputBg);
 	border: 1px solid #333;
-	color: white;
+	color: var(--textMain);
 	padding: 8px;
 	font-family: var(--fontMono);
 	font-size: 0.8rem;
+}
+
+body.light-mode .inputGroup input,
+body.light-mode .inputGroup select {
+	border: 1px solid #ccc; /* Darker than #ddd for more contrast */
 }
 
 .inputRow {
