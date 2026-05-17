@@ -140,6 +140,8 @@
 		<div id="map"></div>
 	</main>
 
+	<script type="text/javascript">const PROTOCOL = {{ PROTOCOL | tojson }}</script>
+	<script type="text/javascript" src="{{ url_for('static', filename='js/libraries/socket.io.js') }}"></script>
 	<script type="text/javascript" src="{{ url_for('static', filename='js/index.js') }}"></script>
 </body>
 

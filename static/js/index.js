@@ -2,12 +2,34 @@
 /*                              GLOBAL VARIABLES                              */
 /* -------------------------------------------------------------------------- */
 
-const robots = [
-	{ id: "R-104", status: "idle", connected: false, batt: 0, lat: 53.52999682543191, lng: -2.2593507826159829, zoneId: null, marker: null },
-	{ id: "R-734", status: "idle", connected: false, batt: 0, lat: 53.53220795931625, lng: -2.2649145104813844, zoneId: null, marker: null },
-	{ id: "R-885", status: "idle", connected: false, batt: 0, lat: 53.52786927789453, lng: -2.2626089407439194, zoneId: null, marker: null },
-	{ id: "R-992", status: "idle", connected: false, batt: 0, lat: 53.53145812092611, lng: -2.2628335175292723, zoneId: null, marker: null },
-];
+const socket = io();
+
+// const robots = [
+// 	{ id: "R-104", status: "idle", connected: false, batt: 0, lat: 53.52999682543191, lng: -2.2593507826159829, zoneId: null, marker: null },
+// 	{ id: "R-734", status: "idle", connected: false, batt: 0, lat: 53.53220795931625, lng: -2.2649145104813844, zoneId: null, marker: null },
+// 	{ id: "R-885", status: "idle", connected: false, batt: 0, lat: 53.52786927789453, lng: -2.2626089407439194, zoneId: null, marker: null },
+// 	{ id: "R-992", status: "idle", connected: false, batt: 0, lat: 53.53145812092611, lng: -2.2628335175292723, zoneId: null, marker: null },
+// ];
+let robots = [];
+
+socket.on("robot_update", (data) => {
+	// Sync robots array while preserving marker references
+	const newRobots = data.map(updated => {
+		const existing = robots.find(r => r.id === updated.id);
+		return { ...updated, marker: existing ? existing.marker : null };
+	});
+
+	// Remove markers for robots no longer in the list
+	robots.forEach(old => {
+		if (old.marker && !data.find(n => n.id === old.id)) {
+			map.removeLayer(old.marker);
+		}
+	});
+
+	robots = newRobots;
+	updateMapMarkers();
+	renderSidebar();
+});
 
 const accentPrimary = "#00ffcc";
 const accentSecondary = "#ffae00";
@@ -318,25 +340,107 @@ function finaliseZoneCreation(bounds) {
 /* -------------------------------------------------------------------------- */
 function renderSidebar() {
 	const hasActiveZone = !!selectedZoneId;
-
-	activeList.innerHTML = "";
-	inactiveList.innerHTML = "";
 	zoneDivider.style.display = hasActiveZone ? "block" : "none";
+
+	// Keep track of which robots were rendered so we can remove stale ones
+	const renderedIds = new Set();
 
 	robots.forEach((r, index) => {
 		const isActive = (selectedZoneId && r.zoneId === selectedZoneId);
-		const card = createRobotCard(r, index, isActive);
+		const targetList = isActive ? activeList : inactiveList;
+		const otherList = isActive ? inactiveList : activeList;
 
-		if (isActive) activeList.appendChild(card);
-		else inactiveList.appendChild(card);
+		let card = document.getElementById(`card-${r.id}`);
+
+		if (!card) {
+			card = createRobotCard(r, index, isActive);
+			card.id = `card-${r.id}`;
+			targetList.appendChild(card);
+		} else {
+			// Update existing card
+			updateRobotCard(card, r, index, isActive);
+			// Move to correct list if it changed
+			if (!targetList.contains(card)) {
+				otherList.removeChild(card);
+				targetList.appendChild(card);
+			}
+		}
+		renderedIds.add(`card-${r.id}`);
+	});
+
+	// Remove cards for robots no longer in the list
+	[activeList, inactiveList].forEach(list => {
+		Array.from(list.children).forEach(card => {
+			if (card.id.startsWith("card-") && !renderedIds.has(card.id)) {
+				card.classList.add("removing");
+
+				card.addEventListener("animationend", () => {
+					list.removeChild(card);
+				}, { once: true });
+			}
+		});
 	});
 
 	if (hasActiveZone && activeList.children.length === 0) {
-		const emptyBox = document.createElement("div");
+		if (!activeList.querySelector(".emptyStateBox")) {
+			const emptyBox = document.createElement("div");
+			emptyBox.className = "emptyStateBox";
+			emptyBox.innerText = `Currently no platforms assigned to ${selectedZoneId}`;
+			activeList.appendChild(emptyBox);
+		}
+	} else {
+		const emptyBox = activeList.querySelector(".emptyStateBox");
+		if (emptyBox) activeList.removeChild(emptyBox);
+	}
+}
 
-		emptyBox.className = "emptyStateBox";
-		emptyBox.innerText = `Currently no platforms assigned to ${selectedZoneId}`;
-		activeList.appendChild(emptyBox);
+function updateRobotCard(card, r, index, isActive) {
+	// Only update classes if they changed to avoid re-triggering animations/reflows
+	const connectedClass = r.connected ? "connected" : "unpaired";
+	const highlightClass = isActive ? "highlighted" : "";
+	const newClassName = `robotCard ${connectedClass} ${highlightClass}`;
+
+	if (card.className !== newClassName) {
+		card.className = newClassName;
+	}
+
+	let statusText = "Disconnected";
+	let dotClass = "";
+
+	if (!r.connected) {
+		if (r.status === "pairing") { statusText = "Pairing..."; dotClass = "pairing"; }
+		else if (r.status === "failed") { statusText = "Unsuccessful"; dotClass = "manual"; }
+	} else {
+		statusText = "Online"; dotClass = "connected";
+		if (r.status === "working") { statusText = "Working"; dotClass = "working"; }
+		if (r.status === "manual") { statusText = "Manual"; dotClass = "manual"; }
+	}
+
+	const latStr = r.lat.toFixed(5);
+	const lngStr = r.lng.toFixed(5);
+
+	// Update only the necessary parts of the card
+	const statusDot = card.querySelector(".dot");
+	if (statusDot.className !== `dot ${dotClass}`) statusDot.className = `dot ${dotClass}`;
+
+	const statusSpan = card.querySelector(".connectionStatus span");
+	if (statusSpan.innerText !== statusText) statusSpan.innerText = statusText;
+
+	const connectBtn = card.querySelector(".actionButton");
+	if (connectBtn) {
+		const shouldShow = !r.connected && r.status !== "pairing";
+		connectBtn.style.display = shouldShow ? "block" : "none";
+	}
+
+	const statVals = card.querySelectorAll(".statVal");
+	if (statVals[0].innerText !== `${r.batt}%`) statVals[0].innerText = `${r.batt}%`;
+	if (statVals[1].innerText !== `${latStr}, ${lngStr}`) statVals[1].innerText = `${latStr}, ${lngStr}`;
+
+	const taskVal = statVals[2];
+	const taskText = r.zoneId ? r.zoneId : "IDLE";
+	if (taskVal.innerText !== taskText) {
+		taskVal.innerText = taskText;
+		taskVal.style.color = r.zoneId ? "var(--accentPrimary)" : "";
 	}
 }
 
@@ -365,6 +469,7 @@ function createRobotCard(r, index, isActive) {
 
 	if (!r.connected) {
 		if (r.status === "pairing") { statusText = "Pairing..."; dotClass = "pairing"; }
+		else if (r.status === "failed") { statusText = "Unsuccessful"; dotClass = "manual"; }
 	} else {
 		statusText = "Online"; dotClass = "connected";
 		if (r.status === "working") { statusText = "Working"; dotClass = "working"; }
@@ -382,13 +487,22 @@ function createRobotCard(r, index, isActive) {
 				<span>${statusText}</span>
 			</div>
 		</div>
-		${!r.connected && r.status !== "pairing" ?
-			`<button class="actionButton" onclick="pairRobot(${index})">Connect</button>` : ""
-		}
+		<button class="actionButton" onclick="pairRobot(${index})" style="display: ${!r.connected && r.status !== "pairing" ? "block" : "none"}">Connect</button>
 		<div class="cardStats">
 			<div class="statRow"><span>BATTERY</span> <span class="statVal">${r.batt}%</span></div>
 			<div class="statRow"><span>LOCATION</span> <span class="statVal">${latStr}, ${lngStr}</span></div>
 			<div class="statRow"><span>TASK</span> <span class="statVal" style="color:${r.zoneId ? "var(--accentPrimary)" : ""}">${r.zoneId ? r.zoneId : "IDLE"}</span></div>
+			<div class="statRow">
+				<span>BINBOT</span>
+				<select class="binBotSelect" onchange="assignBinBot(${index}, this.value)" onclick="event.stopPropagation()">
+					<option value="">None</option>
+					${robots
+						.filter((other, i) => i !== index && other.connected)
+						.map(other => `<option value="${other.id}" ${r.binbotId === other.id ? "selected" : ""}>${other.id}</option>`)
+						.join("")
+					}
+				</select>
+			</div>
 		</div>
 	`;
 
@@ -401,14 +515,7 @@ function pairRobot(index) {
 
 	renderSidebar();
 
-	setTimeout(() => {
-		r.connected = true;
-		r.status = "online";
-		r.batt = Math.floor(Math.random() * 60) + 40;
-
-		updateMapMarkers();
-		renderSidebar();
-	}, 1000);
+	socket.emit("pair_robot", { id: r.id, mac: r.mac });
 };
 
 function startZoneOps(zId) {
@@ -417,12 +524,24 @@ function startZoneOps(zId) {
 
 	if (targetZone) {
 		const bounds = targetZone.layer.getBounds();
+		const points = targetZone.layer.getLatLngs()[0];
 
 		robots.forEach(r => {
 			if (r.connected && bounds.contains(L.latLng(r.lat, r.lng))) {
 				r.status = "working";
 				r.zoneId = zId;
 				count++;
+
+				socket.emit("send_data", {
+					cmdName: "areaCoords",
+					payload: {
+						"topLeftLatitude": points[1].lat, // Top-Left Lat
+						"topLeftLongitude": points[1].lng, // Top-Left Lng
+						"bottomRightLatitude": points[3].lat, // Bottom-Right Lat
+						"bottomRightLongitude": points[3].lng  // Bottom-Right Lng
+					},
+					nodeId: r.intId
+				});
 			}
 		});
 	}
@@ -482,9 +601,19 @@ function resumeAutoContext(index) {
 }
 
 function disconnectRobot(index) {
+	const disconnectedRobotId = robots[index].id;
+
 	robots[index].connected = false;
 	robots[index].status = "idle";
 	robots[index].zoneId = null;
+	robots[index].binbotId = null;
+
+	// Clear this robot from being anyone else's BinBot
+	robots.forEach(r => {
+		if (r.binbotId === disconnectedRobotId) {
+			r.binbotId = null;
+		}
+	});
 
 	updateMapMarkers();
 	renderSidebar();
@@ -496,7 +625,7 @@ function assignRobot(index, zoneId) {
 
 	if (selectedZone) {
 		const center = selectedZone.layer.getBounds().getCenter();
-		
+
 		robots[index].lat = center.lat; robots[index].lng = center.lng;
 
 		updateMapMarkers();
@@ -508,6 +637,23 @@ function assignRobot(index, zoneId) {
 function unassignRobot(index) {
 	robots[index].zoneId = null;
 	robots[index].status = "idle";
+
+	renderSidebar();
+}
+
+function assignBinBot(index, binBotId) {
+	const robot = robots[index];
+	const oldBinBotId = robot.binBotId;
+
+	robot.binBotId = binBotId || null;
+
+	if (oldBinBotId !== robot.binBotId) {
+		socket.emit("send_data", {
+			cmdName: "assignBinbot",
+			payload: { "binbotNodeId": robot.binBotId },
+			nodeId: robot.id
+		});
+	}
 
 	renderSidebar();
 }
@@ -562,6 +708,16 @@ function setupTeleopArrowListeners() {
 		if (el) {
 			el.classList.add("active");
 			console.log(`Sending Command: ${key} to Robot ${robots[teleopIndex].id}`);
+
+			// Map arrows to a single 1-byte character
+			const keyMap = { "ArrowUp": "U", "ArrowDown": "D", "ArrowLeft": "L", "ArrowRight": "R" };
+			const direction = keyMap[key];
+
+			socket.emit("send_data", {
+				cmdName: "movement",
+				payload: { "direction": direction },
+				nodeId: robots[teleopIndex].intId
+			});
 
 			if (robots[teleopIndex].status !== "manual") {
 				robots[teleopIndex].status = "manual";

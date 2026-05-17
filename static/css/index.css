@@ -181,6 +181,17 @@ aside.collapsed {
 	}
 }
 
+@keyframes slideOut {
+	from {
+		opacity: 1;
+		transform: translateY(0);
+	}
+	to {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+}
+
 .robotCard:hover {
 	background: rgba(255, 255, 255, 0.07);
 	border-color: rgba(255, 255, 255, 0.2);
@@ -190,6 +201,11 @@ aside.collapsed {
 	background: rgba(0, 255, 204, 0.15);
 	border: 1px solid var(--accentPrimary);
 	box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
+}
+
+.robotCard.removing {
+	animation: slideOut 0.3s ease-in forwards;
+	pointer-events: none;
 }
 
 .cardTop {
@@ -267,6 +283,27 @@ aside.collapsed {
 .statVal {
 	color: var(--textMain);
 	font-family: var(--fontMono);
+}
+
+.binBotSelect {
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	color: var(--textMain);
+	font-family: var(--fontMono);
+	font-size: 0.7rem;
+	padding: 2px 4px;
+	border-radius: 3px;
+	outline: none;
+	cursor: pointer;
+}
+
+.binBotSelect:hover {
+	background: rgba(255, 255, 255, 0.1);
+}
+
+.binBotSelect option {
+	background: var(--bgDark);
+	color: var(--textMain);
 }
 
 .actionButton {
