@@ -585,6 +585,38 @@ body.light-mode .teleopControlsStats {
 	color: var(--accentDanger);
 }
 
+.beeperButton {
+	grid-column: span 2;
+}
+
+.beeperContainer {
+	margin-top: 15px;
+}
+
+.emergencyStopButton {
+	background: #ff0000;
+	color: #fff;
+	border: none;
+	padding: 20px;
+	font-size: 1.5rem;
+	font-weight: bold;
+	border-radius: 8px;
+	cursor: pointer;
+	text-align: center;
+	transition: 0.2s;
+	box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
+	margin-top: auto;
+}
+
+.emergencyStopButton:hover {
+	background: #cc0000;
+	box-shadow: 0 0 30px rgba(255, 0, 0, 0.6);
+}
+
+.emergencyStopButton:active {
+	transform: scale(0.95);
+}
+
 .teleopActionButton.primary {
 	border-color: var(--accentPrimary);
 	color: var(--accentPrimary);

@@ -781,6 +781,10 @@ function setupTeleopArrowListeners() {
 		soundBeeper();
 	});
 
+	document.getElementById("teleopEmergencyStopButton").addEventListener("click", () => {
+		emergencyStop();
+	});
+
 	// Close precision zone modal
 	document.getElementById("closePrecisionZoneModal").addEventListener("click", () => {
 		closePrecisionZoneModal();
@@ -814,6 +818,22 @@ function resumeAuto() {
 		renderSidebar();
 		updateTeleopStats();
 	}
+}
+
+function emergencyStop() {
+	if (teleopIndex === null) return;
+
+	console.log(`EMERGENCY STOP for ${robots[teleopIndex].id}`);
+	socket.emit("send_data", {
+		cmdName: "movement",
+		payload: { "direction": "S" }, // 'S' for Stop
+		nodeId: robots[teleopIndex].intId
+	});
+
+	robots[teleopIndex].status = "online";
+	updateMapMarkers();
+	renderSidebar();
+	updateTeleopStats();
 }
 
 function toggleArm() {
