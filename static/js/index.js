@@ -42,6 +42,7 @@ let startLat = 53.52902931948096;
 let startLng = -2.2629539937033964;
 let teleopIndex = null;
 let zones = [];
+const litterMarkers = [];
 
 /* ----------------------------------- DOM ---------------------------------- */
 const activeList = document.getElementById("activeList");
@@ -703,6 +704,60 @@ function openTeleop(index) {
 function closeTeleop() {
 	document.getElementById("teleopOverlay").style.display = "none";
 	teleopIndex = null;
+}
+
+function addLitterMarker() {
+	if (teleopIndex === null) {
+		console.warn("Litter markers can only be added while in Remote Control mode.");
+		return;
+	}
+
+	const r = robots[teleopIndex];
+	const lat = r.lat;
+	const lng = r.lng;
+	const timestamp = new Date().toLocaleTimeString();
+
+	// Use a canvas to capture a static snapshot from the video feed at this exact moment
+	const feedImg = document.querySelector(".cameraFeed img");
+	let imgSrc;
+
+	if (feedImg && feedImg.src && feedImg.complete && feedImg.naturalWidth !== 0) {
+		try {
+			const canvas = document.createElement("canvas");
+			canvas.width = feedImg.naturalWidth;
+			canvas.height = feedImg.naturalHeight;
+			const ctx = canvas.getContext("2d");
+			ctx.drawImage(feedImg, 0, 0);
+			imgSrc = canvas.toDataURL("image/jpeg");
+		} catch (e) {
+			console.warn("Could not capture canvas snapshot (likely CORS) - falling back to URL.", e);
+			imgSrc = feedImg.src;
+		}
+	} else {
+		imgSrc = "https://via.placeholder.com/300x200?text=Litter+Detection+Frame";
+	}
+
+	const litterIcon = L.divIcon({
+		className: "litter-marker-icon",
+		html: "L",
+		iconSize: [20, 20],
+		iconAnchor: [10, 10]
+	});
+
+	const marker = L.marker([lat, lng], { icon: litterIcon }).addTo(map);
+
+	marker.bindPopup(`
+		<div class="litter-popup-content">
+			<strong>LITTER DETECTED</strong><br>
+			<span style="color:var(--textMuted); font-size:0.7rem;">${timestamp}</span><br>
+			<hr style="margin:5px 0; border:0; border-top:1px solid #444;">
+			Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}<br>
+			<img src="${imgSrc}" alt="Litter Evidence">
+		</div>
+	`);
+
+	litterMarkers.push(marker);
+	console.log(`Litter marker added at ${lat}, ${lng}`);
 }
 
 function updateTeleopStats() {
