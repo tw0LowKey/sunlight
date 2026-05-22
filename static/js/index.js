@@ -691,7 +691,7 @@ function openTeleop(index) {
 	const r = robots[index];
 
 	if (!r.connected) {
-		alert("Cannot manually control disconnected unit");
+		alert("Cannot manually control disconnected or pairing unit");
 		return;
 	}
 
@@ -766,6 +766,7 @@ function updateTeleopStats() {
 	const r = robots[teleopIndex];
 	document.getElementById("teleBatt").innerText = `${r.batt}%`;
 	document.getElementById("teleLoc").innerText = `${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}`;
+	document.getElementById("teleCamera").src = `http://${r.ip}:8080/stream?topic=/camera/color/image_raw&type=mjpeg&qos_profile=sensor_data&width=424&height=240&quality=35&default_transport=compressed`;
 
 	const statusEl = document.getElementById("teleStatus");
 	statusEl.innerText = r.status.toUpperCase();
@@ -791,7 +792,7 @@ function setupTeleopArrowListeners() {
 
 			// Map arrows to a single 1-byte character
 			const keyMap = { "ArrowUp": "U", "ArrowDown": "D", "ArrowLeft": "L", "ArrowRight": "R" };
-			const direction = keyMap[key];
+			const direction = keyMap[key].charAt(0);
 
 			socket.emit("send_data", {
 				cmdName: "movement",
@@ -898,5 +899,38 @@ function toggleArm() {
 function soundBeeper() {
 	console.log(`Beep Sent to ${robots[teleopIndex].id}`);
 }
+
+/* -------------------------------------------------------------------------- */
+/*                                LoRa Updates                                */
+/* -------------------------------------------------------------------------- */
+
+socket.on("heartbeat", (nodeId, payload) => {
+	const idx = robots.findIndex(item => item.intId == nodeId);
+
+	robots[idx].batt = payload["battery"];
+	robots[idx].lat = payload["lat"];
+	robots[idx].lng = payload["lng"];
+
+	console.log(payload);
+	renderSidebar();
+	updateTeleopStats();
+})
+
+socket.on("send_camera_ip_address", (nodeId, payload) => {
+	const idx = robots.findIndex(item => item.intId == nodeId);
+
+	const ipAddress = [
+		(payload["ipAddress"] >>> 24) & 255,
+		(payload["ipAddress"] >>> 16) & 255,
+		(payload["ipAddress"] >>> 8) & 255,
+		 payload["ipAddress"] & 255
+	].join(".");
+
+	robots[idx].ip = ipAddress;
+
+	console.log(payload);
+	renderSidebar();
+	updateTeleopStats();
+});
 
 init();

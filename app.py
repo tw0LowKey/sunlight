@@ -23,6 +23,10 @@ if not app.config["SECRET_KEY"]:
 state = {
 	"comms": None,
 	"robots": []
+	# "robots": [
+	# 	{ "id": "R-007", "status": "idle", "connected": True, "batt": 42, "lat": 53.52999682543191, "lng": -2.2593507826159829, "zoneId": None, "marker": None },
+	# 	{ "id": "R-067", "status": "idle", "connected": False, "batt": 87, "lat": 53.53220795931625, "lng": -2.2649145104813844, "zoneId": None, "marker": None },
+	# ]
 }
 
 def on_bt_update(nearby_robots):
@@ -39,6 +43,8 @@ def on_bt_update(nearby_robots):
 			# Update MAC if it changed, but keep status (idle / failed)
 			r["mac"] = nearby_dict[r["id"]]["mac"]
 			new_robots.append(r)
+		else:
+			pass
 
 	# Add brand new robots found nearby
 	existing_ids = {r["id"] for r in new_robots}
@@ -49,6 +55,7 @@ def on_bt_update(nearby_robots):
 					"id": nrobot["id"],
 					"intId": int(nrobot["id"].split("-")[-1]),
 					"binbotId": None,
+					"ip": None,
 					"mac": nrobot["mac"],
 					"status": "idle",
 					"connected": False,
@@ -65,6 +72,14 @@ def on_bt_update(nearby_robots):
 	if new_summary != old_summary:
 		state["robots"] = new_robots
 		socketio.emit("robot_update", state["robots"])
+
+def on_lora_update(cmdName, nodeId, payload):
+	if cmdName == "heartbeat":
+		socketio.emit("heartbeat", (nodeId, payload))
+	elif cmdName == "sendCameraIpAddress":
+		socketio.emit("send_camera_ip_address", (nodeId, payload))
+	else:
+		print(f"Unknown command sent: {cmdName} | {payload}")
 
 # ---------------------------------------------------------------------------- #
 #                                    ROUTES                                    #
@@ -117,6 +132,10 @@ def send_data(data):
 	payload = data.get("payload")
 	nodeId = data.get("nodeId")
 
+	# Done like this in order to have cmdId first in the keys - makes the debugging messages nicer
+	# There is likely a better solution
+	payload = { "cmdId": state["comms"].lora.getProtocolCmdId(cmdName), **payload }
+
 	state["comms"].lora.transmit(cmdName, payload, nodeId)
 
 @app.errorhandler(404)
@@ -127,5 +146,6 @@ if __name__ == "__main__":
 	if getenv("WERKZEUG_RUN_MAIN") == "true":
 		state["comms"] = Comms()
 		state["comms"].bt.set_bt_update_callback(on_bt_update)
+		state["comms"].lora.set_lora_callback(on_lora_update)
 
 	socketio.run(app, debug=True, use_reloader=True)

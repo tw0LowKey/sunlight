@@ -7,9 +7,9 @@ from threading import Lock, Thread
 from time import sleep, time
 
 PROTOCOL = {
-	"0":  { "name": "heartbeat", "structFormat": "!Bfdd", "keys": ["cmdId", "battery", "lat", "lng"] },
+	"0":  { "name": "heartbeat", "structFormat": "!Bhdd", "keys": ["cmdId", "battery", "lat", "lng"] },
 	"1":  { "name": "areaCoords", "structFormat": "!Bdddd", "keys": ["cmdId", "topLeftLatitude", "topLeftLongitude", "bottomRightLatitude", "bottomRightLongitude"] },
-	"2":  { "name": "setCameraFeedStatus", "structFormat": "!B?", "keys": ["cmdId", "enabled"] },
+	"2":  { "name": "sendCameraIpAddress", "structFormat": "!BI", "keys": ["cmdId", "ipAddress"] },
 	"3":  { "name": "movement", "structFormat": "!Bc", "keys": ["cmdId", "direction"] },
 	"4":  { "name": "resumeAuto", "structFormat": "!B", "keys": ["cmdId"] },
 	"5":  { "name": "setArmStatus", "structFormat": "!B?", "keys": ["cmdId", "enabled"] },
@@ -183,13 +183,14 @@ class Bluetooth:
 class Lora:
 	def __init__(self, port="/dev/arduino_mega", baud=115200):
 		self.ready = False
+		self._lora_update_callback = None
 
 		try:
 			self.ser = Serial(port, baud, timeout=1)
 			print(f"\n[LoRa]: Connected on {port}")
 		except Exception as e:
 			self.ser = None
-			print(f"[LoRa] Error: {e}")
+			print(f"[LoRa]: Error: {e}")
 			exit()
 
 		self.listener = Thread(target=self._listen, daemon=True)
@@ -221,11 +222,14 @@ class Lora:
 							unpacked = struct.unpack(cmd_info["structFormat"], data)
 							# Zip keys and values into a dictionary
 							payload_dict = dict(zip(cmd_info["keys"], unpacked))
-							print(f"[LoRa] {node_id} ({cmd_info['name']}): {payload_dict}")
+							print(f"[LoRa]: {node_id} ({cmd_info['name']}): {payload_dict}")
+
+							if self._lora_update_callback is not None:
+								self._lora_update_callback(cmd_info["name"], node_id, payload_dict)
 						else:
-							print(f"[LoRa] {node_id} (Unknown ID {cmd_id}): {hex_payload}")
+							print(f"[LoRa]: {node_id} (Unknown ID {cmd_id}): {hex_payload}")
 					except Exception as e:
-						print(f"[LoRa] Raw: {line} (Parse Error: {e})")
+						print(f"[LoRa]: Raw - {line} (Parse Error: {e})")
 				else:
 					print(f"[LoRa]: {line}")
 
@@ -240,15 +244,18 @@ class Lora:
 
 					for key in info["keys"][1:]: # Skip the command ID as it is always first
 						val = payload.get(key)
+
 						# Convert to bytes if it's a single character for '!c'
-						# if isinstance(val, str) and len(val) == 1:
-						# 	val = val.encode("ascii")
+						if isinstance(val, str) and len(val) == 1:
+							val = val.encode("ascii")
+
 						args.append(val)
 
 					try:
 						packed = struct.pack(info["structFormat"], *args)
 					except struct.error as e:
-						print(f"LoRa]: The struct packing has failed - the issue is likely that the command keys do not match those that are trying to be sent - payload ({list(payload.keys())}) | command keys ({info['keys']}): {e}")
+						print(f"[LoRa]: The struct packing has failed - the issue is likely that the command keys do not match those that are trying to be sent - payload ({list(payload.keys())}) | command keys ({info['keys']}): {e}")
+
 						return None
 
 					# Send the data to the arduino
@@ -260,6 +267,16 @@ class Lora:
 		else:
 			# Simple command with just the ID as a single byte hex
 			print(f"Received unknown command from UCS: {cmdName}")
+
+	def getProtocolCmdId(self, cmdName: str):
+		for cmdId, info in PROTOCOL.items():
+			if info["name"] == cmdName:
+				return int(cmdId)
+
+		return None
+
+	def set_lora_callback(self, callback):
+		self._lora_update_callback = callback
 
 class Comms:
 	def __init__(self):
