@@ -760,6 +760,7 @@ body.light-mode .precisionZoneHeader {
 }
 
 .inputGroup {
+	flex: 1;
 	margin-bottom: 10px;
 }
 
