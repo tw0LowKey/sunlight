@@ -8,6 +8,7 @@
 
 	<link rel="stylesheet" href="{{ url_for('static', filename='css/libraries/leaflet.css') }}"></script>
 	<link rel="stylesheet" href="{{ url_for('static', filename='css/libraries/leaflet.draw.css') }}"></script>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/libraries/toastify.min.css') }}">
 	<link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
 
 	<meta name="description" content="">
@@ -80,13 +81,23 @@
 		<div class="precisionZoneModal">
 			<div class="precisionZoneHeader">
 				<h3>Precision Zone</h3>
-				<button class="toggleButton" id="closePrecisionZoneModal">&times;</button>
+				<div style="display: flex; gap: 8px;">
+					<button class="toggleButton" id="refreshGPSBase" title="Refresh GPS Base Coordinates" style="display: none;">
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 16px; height: 16px;">
+							<polyline points="23 4 23 10 17 10"></polyline>
+							<polyline points="1 20 1 14 7 14"></polyline>
+							<path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+						</svg>
+					</button>
+					<button class="toggleButton" id="closePrecisionZoneModal">&times;</button>
+				</div>
 			</div>
 
 			<div class="precisionZoneTabSelectorContainer" id="precisionZoneTabSelectorContainer">
 				<button class="tabButton active" id="precisionZoneTab1Selector">Coordinates</button>
 				<button class="tabButton" id="precisionZoneTab2Selector">Dimensions</button>
 				<button class="tabButton" id="precisionZoneTab3Selector">Center on Me</button>
+				<button class="tabButton" id="precisionZoneTab4Selector">GPS Base</button>
 			</div>
 
 			<div class="precisionZoneTabContent active" id="precisionZoneTab1">
@@ -119,6 +130,21 @@
 				<div class="inputRow">
 					<div class="inputGroup"><label>Box Height (m)</label><input type="number" id="meHeight" value="100"></div>
 					<div class="inputGroup"><label>Box Width (m)</label><input type="number" id="meWidth" value="100"></div>
+				</div>
+			</div>
+
+			<div class="precisionZoneTabContent" id="precisionZoneTab4">
+				<div class="inputRow">
+					<div class="inputGroup"><label>Base Latitude</label><input type="number" step="0.0001" id="baseLat" value="0.0"></div>
+					<div class="inputGroup"><label>Base Longitude</label><input type="number" step="0.0001" id="baseLng" value="0.0"></div>
+				</div>
+				<div class="inputRow">
+					<div class="inputGroup"><label>Vertical Origin</label><select id="baseV"><option value="top">Top</option><option value="bottom">Bottom</option></select></div>
+					<div class="inputGroup"><label>Horizontal Origin</label><select id="baseH"><option value="left">Left</option><option value="right">Right</option></select></div>
+				</div>
+				<div class="inputRow">
+					<div class="inputGroup"><label>Height (m)</label><input type="number" id="baseHeight" value="200"></div>
+					<div class="inputGroup"><label>Width (m)</label><input type="number" id="baseWidth" value="200"></div>
 				</div>
 			</div>
 
@@ -156,6 +182,7 @@
 
 	<script type="text/javascript">const PROTOCOL = {{ PROTOCOL | tojson }}</script>
 	<script type="text/javascript" src="{{ url_for('static', filename='js/libraries/socket.io.js') }}"></script>
+	<script type="text/javascript" src="{{ url_for('static', filename='js/libraries/toastify.js') }}"></script>
 	<script type="text/javascript" src="{{ url_for('static', filename='js/index.js') }}"></script>
 </body>
 

@@ -1,10 +1,14 @@
 import logging
+import socket
 from comms import Comms, PROTOCOL
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 from os import getenv
 
 __version__ = 1.0
+
+GPS_BASE_STATION_HOST = "reach-base.local"
+GPS_BASE_STATION_PORT = 9001
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = getenv("FLASK_SECRET_KEY")
@@ -14,7 +18,7 @@ log = logging.getLogger("werkzeug")
 log.setLevel(logging.ERROR)
 
 if not app.config["SECRET_KEY"]:
-    raise ValueError("No FLASK_SECRET_KEY set - Please set the secret key before continuing")
+	raise ValueError("No FLASK_SECRET_KEY set - Please set the secret key before continuing")
 
 # ---------------------------------------------------------------------------- #
 #                                     STATE                                    #
@@ -89,6 +93,10 @@ def on_lora_update(cmdName, nodeId, payload):
 def index():
 	return render_template("index.html", version=__version__, PROTOCOL=PROTOCOL)
 
+@app.errorhandler(404)
+def pageNotFound(e):
+	return render_template("404.html"), 404
+
 @socketio.on("connect")
 def on_connect():
 	emit("robot_update", state["robots"])
@@ -138,9 +146,41 @@ def send_data(data):
 
 	state["comms"].lora.transmit(cmdName, payload, nodeId)
 
-@app.errorhandler(404)
-def pageNotFound(e):
-	return render_template("404.html"), 404
+@socketio.on("get_gps_base")
+def get_gps_base():
+	try:
+		# Create a socket
+		client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		client_socket.settimeout(2.0) # 2 second timeout
+
+		# Connect to the server
+		client_socket.connect((GPS_BASE_STATION_HOST, GPS_BASE_STATION_PORT))
+
+		# Receive the data from the base station
+		data = client_socket.recv(1024)
+		client_socket.close()
+
+		if not data:
+			return { "error": "No data received" }
+
+		# Data format: date time lat lng alt ...
+		decoded_data = data.decode("utf-8", errors="ignore").strip()
+		parts = decoded_data.split()
+
+		if len(parts) >= 4:
+			return {
+				"lat": float(parts[2]),
+				"lng": float(parts[3])
+			}
+
+		return { "error": f"Invalid data format: {decoded_data}" }
+
+	except socket.timeout:
+		return { "error": "Connection timed out" }
+	except ConnectionRefusedError:
+		return { "error": "Connection refused - Check if the server is running" }
+	except Exception as e:
+		return { "error": f"An error occurred: {str(e)}"}
 
 if __name__ == "__main__":
 	if getenv("WERKZEUG_RUN_MAIN") == "true":

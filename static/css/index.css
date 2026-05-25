@@ -705,7 +705,7 @@ main {
 .precisionZoneModal {
 	background: var(--panelBg);
 	border: 1px solid var(--accentPrimary);
-	width: 400px;
+	width: 500px;
 	border-radius: 8px;
 	padding: 20px;
 	box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
@@ -797,4 +797,13 @@ body.light-mode .inputGroup select {
 	display: flex;
 	justify-content: flex-end;
 	gap: 10px;
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+.spinning svg {
+	animation: spin 1s linear infinite;
 }

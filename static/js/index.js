@@ -112,6 +112,37 @@ function setupThemeToggle() {
 }
 
 /* -------------------------------------------------------------------------- */
+/*                                    MISC                                    */
+/* -------------------------------------------------------------------------- */
+
+
+function showToast (message, type = "primary") {
+	const colors = {
+		primary: "var(--accentPrimary)",
+		secondary: "var(--accentSecondary)",
+		danger: "var(--accentDanger)"
+	};
+
+	Toastify({
+		text: message,
+		duration: 5000,
+		gravity: "top",
+		position: "center",
+		stopOnFocus: true,
+		style: {
+			background: "var(--panelBg)",
+			color: colors[type] || colors.primary,
+			border: `1px solid ${colors[type] || colors.primary}`,
+			backdropFilter: "var(--glassEffect)",
+			fontFamily: "var(--fontSans)",
+			fontSize: "0.8rem",
+			boxShadow: "0 5px 15px rgba(0,0,0,0.3)",
+			borderRadius: "4px"
+		}
+	}).showToast();
+}
+
+/* -------------------------------------------------------------------------- */
 /*                                     MAP                                    */
 /* -------------------------------------------------------------------------- */
 function initMap() {
@@ -288,16 +319,55 @@ function deselectZone() {
 /* ----------------------------- PRECISION ZONES ---------------------------- */
 function openPrecisionZoneModal() {
 	document.getElementById("precisionZoneOverlay").style.display = "flex";
+
+	// Check if the GPS Base tab is open to show / hide the refresh button
+	const activeTab = document.querySelector(".precisionZoneTabContent.active");
+	const refreshBtn = document.getElementById("refreshGPSBase");
+
+	if (refreshBtn && activeTab) {
+		refreshBtn.style.display = (activeTab.id === "precisionZoneTab4") ? "flex" : "none";
+	}
+
+	refreshGPSBaseData();
 }
 
 function closePrecisionZoneModal() {
 	document.getElementById("precisionZoneOverlay").style.display = "none";
 }
 
+async function refreshGPSBaseData() {
+	const btn = document.getElementById("refreshGPSBase");
+
+	if (btn) btn.classList.add("spinning");
+
+	socket.emit("get_gps_base", (data) => {
+		try {
+			if (data && data.lat && data.lng) {
+				document.getElementById("baseLat").value = data.lat;
+				document.getElementById("baseLng").value = data.lng;
+			} else {
+				console.error("GPS base station error:", data?.error);
+				showToast(
+					"The GPS base station cannot be found - Please check that it is on and connected to the same network",
+					"danger"
+				);
+			}
+		} finally {
+			if (btn) { btn.classList.remove("spinning") };
+		}
+	});
+}
+
 function switchPrecisionZoneTab(tabId) {
 	document.querySelectorAll(".precisionZoneTabContent").forEach(el => el.classList.remove("active"));
 	document.querySelectorAll(".tabButton").forEach(el => el.classList.remove("active"));
 	document.getElementById(tabId).classList.add("active"); event.target.classList.add("active");
+
+	// Show the refresh button only when the GPS Base tab is open
+	const refreshBtn = document.getElementById("refreshGPSBase");
+	if (refreshBtn) {
+		refreshBtn.style.display = (tabId === "precisionZoneTab4") ? "flex" : "none";
+	}
 }
 
 function areValidCoords(lat, lng) {
@@ -356,6 +426,20 @@ function createPrecisionZone() {
 			});
 
 			return;
+		}
+	} else if (activeTab === "precisionZoneTab4") {
+		const lat = parseFloat(document.getElementById("baseLat").value);
+		const lng = parseFloat(document.getElementById("baseLng").value);
+		const w = parseFloat(document.getElementById("baseWidth").value);
+		const h = parseFloat(document.getElementById("baseHeight").value);
+
+		const latDelta = h / 111111;
+		const lngDelta = w / (111111 * Math.cos(lat * Math.PI / 180));
+
+		bounds = [[lat, lng], [lat + latDelta, lng + lngDelta]];
+
+		if (!areValidCoords(bounds[0][0], bounds[0][1]) || !areValidCoords(bounds[1][0], bounds[1][1])) {
+			return alert("Invalid Coordinates - Please ensure:\n - latitude values are between -90 and 90\n - longitude values are between -180 and 180\n - height and width values are normal");
 		}
 	}
 
@@ -857,6 +941,14 @@ function setupTeleopArrowListeners() {
 
 	document.getElementById("precisionZoneTab3Selector").addEventListener("click", () => {
 		switchPrecisionZoneTab("precisionZoneTab3");
+	});
+
+	document.getElementById("precisionZoneTab4Selector").addEventListener("click", () => {
+		switchPrecisionZoneTab("precisionZoneTab4");
+	});
+
+	document.getElementById("refreshGPSBase").addEventListener("click", () => {
+		refreshGPSBaseData();
 	});
 
 	// Precision zone actions
