@@ -17,7 +17,8 @@ PROTOCOL = {
 	"7":  { "name": "returnToStart", "structFormat": "!B", "keys": ["cmdId"] },
 	"8":  { "name": "sendLeaderToFollower", "structFormat": "!Biddff?", "keys": ["cmdId", "seq", "latitude", "longitude", "orientation_z", "orientation_w", "call_bin"] },
 	"9":  { "name": "sendFollowerToLeader", "structFormat": "!Bi?ff?", "keys": ["cmdId", "seq", "parked", "park_x", "park_y", "bin_ready"] },
-	"10": { "name": "assignBinbot", "structFormat": "!Bi", "keys": ["cmdId", "binbotNodeId"] }
+	"10": { "name": "assignBinbot", "structFormat": "!Bi", "keys": ["cmdId", "binbotNodeId"] },
+	"11": { "name": "addLitterMarker", "structFormat": "!B", "keys": ["cmdId"] },
 }
 
 class Bluetooth:

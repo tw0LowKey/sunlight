@@ -790,13 +790,8 @@ function closeTeleop() {
 	teleopIndex = null;
 }
 
-function addLitterMarker() {
-	if (teleopIndex === null) {
-		console.warn("Litter markers can only be added while in Remote Control mode.");
-		return;
-	}
-
-	const r = robots[teleopIndex];
+function addLitterMarker(idx) {
+	const r = robots[idx];
 	const lat = r.lat;
 	const lng = r.lng;
 	const timestamp = new Date().toLocaleTimeString();
@@ -808,17 +803,16 @@ function addLitterMarker() {
 	if (feedImg && feedImg.src && feedImg.complete && feedImg.naturalWidth !== 0) {
 		try {
 			const canvas = document.createElement("canvas");
+			const ctx = canvas.getContext("2d");
+
 			canvas.width = feedImg.naturalWidth;
 			canvas.height = feedImg.naturalHeight;
-			const ctx = canvas.getContext("2d");
 			ctx.drawImage(feedImg, 0, 0);
 			imgSrc = canvas.toDataURL("image/jpeg");
 		} catch (e) {
-			console.warn("Could not capture canvas snapshot (likely CORS) - falling back to URL.", e);
+			console.warn("Could not capture canvas snapshot - Falling back to URL:", e);
 			imgSrc = feedImg.src;
 		}
-	} else {
-		imgSrc = "https://via.placeholder.com/300x200?text=Litter+Detection+Frame";
 	}
 
 	const litterIcon = L.divIcon({
@@ -1023,6 +1017,12 @@ socket.on("send_camera_ip_address", (nodeId, payload) => {
 	console.log(payload);
 	renderSidebar();
 	updateTeleopStats();
+});
+
+socket.on("add_litter_marker", (nodeId, payload) => {
+	const idx = robots.findIndex(item => item.intId == nodeId);
+
+	addLitterMarker(idx)
 });
 
 init();

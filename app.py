@@ -82,6 +82,8 @@ def on_lora_update(cmdName, nodeId, payload):
 		socketio.emit("heartbeat", (nodeId, payload))
 	elif cmdName == "sendCameraIpAddress":
 		socketio.emit("send_camera_ip_address", (nodeId, payload))
+	elif cmdName == "addLitterMarker":
+		socketio.emit("add_litter_marker", (nodeId, payload))
 	else:
 		print(f"Unknown command sent: {cmdName} | {payload}")
 
