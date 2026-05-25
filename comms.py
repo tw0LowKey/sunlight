@@ -220,8 +220,7 @@ class Lora:
 						cmd_info = PROTOCOL.get(str(cmd_id))
 						if cmd_info and "structFormat" in cmd_info:
 							unpacked = struct.unpack(cmd_info["structFormat"], data)
-							# Zip keys and values into a dictionary
-							payload_dict = dict(zip(cmd_info["keys"], unpacked))
+							payload_dict = dict(zip(cmd_info["keys"], unpacked)) # Zip keys and values into a dictionary
 							print(f"[LoRa]: {node_id} ({cmd_info['name']}): {payload_dict}")
 
 							if self._lora_update_callback is not None:
