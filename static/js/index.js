@@ -390,7 +390,10 @@ function createPrecisionZone() {
 		bounds = [[topLeftLat, topLeftLng], [bottomRightLat, bottomRightLng]];
 
 		if (!areValidCoords(bounds[0][0], bounds[0][1]) || !areValidCoords(bounds[1][0], bounds[1][1])) {
-			return alert("Invalid Coordinates - Please ensure:\n - latitude values are between -90 and 90\n - longitude values are between -180 and 180");
+			return showToast(
+				"Invalid Coordinates - Please ensure:\n - Latitude values are between -90 and 90\n - Longitude values are between -180 and 180",
+				"danger"
+			);
 		}
 	} else if (activeTab === "precisionZoneTab2") {
 		const lat = parseFloat(document.getElementById("anchorLat").value);
@@ -404,7 +407,10 @@ function createPrecisionZone() {
 		bounds = [[lat, lng], [lat + latDelta, lng + lngDelta]];
 
 		if (!areValidCoords(bounds[0][0], bounds[0][1]) || !areValidCoords(bounds[1][0], bounds[1][1])) {
-			return alert("Invalid Coordinates - Please ensure:\n - latitude values are between -90 and 90\n - longitude values are between -180 and 180\n - height and width values are normal");
+			return showToast(
+				"Invalid Coordinates - Please ensure:\n - Latitude values are between -90 and 90\n - Longitude values are between -180 and 180\n - Height and width values are normal",
+				"danger"
+			);
 		}
 	} else if (activeTab === "precisionZoneTab3") {
 		if ("geolocation" in navigator) {
@@ -419,7 +425,10 @@ function createPrecisionZone() {
 				bounds = [[lat + latDelta, lng - lngDelta], [lat - latDelta, lng + lngDelta]];
 
 				if (!areValidCoords(bounds[0][0], bounds[0][1]) || !areValidCoords(bounds[1][0], bounds[1][1])) {
-					return alert("Invalid Coordinates - Please ensure:\n - height and width values are normal");
+					return showToast(
+						"Invalid Coordinates - Please ensure:\n - Height and width values are normal",
+						"danger"
+					);
 				}
 
 				finaliseZoneCreation(bounds);
@@ -439,7 +448,10 @@ function createPrecisionZone() {
 		bounds = [[lat, lng], [lat + latDelta, lng + lngDelta]];
 
 		if (!areValidCoords(bounds[0][0], bounds[0][1]) || !areValidCoords(bounds[1][0], bounds[1][1])) {
-			return alert("Invalid Coordinates - Please ensure:\n - latitude values are between -90 and 90\n - longitude values are between -180 and 180\n - height and width values are normal");
+			return showToast(
+				"Invalid Coordinates - Please ensure:\n - Latitude values are between -90 and 90\n - Longitude values are between -180 and 180\n - Height and width values are normal",
+				"danger"
+			);
 		}
 	}
 
@@ -775,8 +787,10 @@ function openTeleop(index) {
 	const r = robots[index];
 
 	if (!r.connected) {
-		alert("Cannot manually control disconnected or pairing unit");
-		return;
+		return showToast(
+			"Cannot manually control disconnected or pairing unit",
+			"danger"
+		);
 	}
 
 	teleopIndex = index;
