@@ -43,6 +43,7 @@ let startLng = -2.2629539937033964;
 let teleopIndex = null;
 let zones = [];
 const litterMarkers = [];
+const litterLogData = [];
 
 /* ----------------------------------- DOM ---------------------------------- */
 const activeList = document.getElementById("activeList");
@@ -51,10 +52,15 @@ const zoneDivider = document.getElementById("zoneDivider");
 const listHeader = document.getElementById("listHeaderTitle");
 const contextMenu = document.getElementById("contextMenu");
 const themeToggleButton = document.getElementById("themeToggleButton");
+const openLitterLogButton = document.getElementById("openLitterLogButton");
+const closeLitterLogModal = document.getElementById("closeLitterLogModal");
+const litterLogOverlay = document.getElementById("litterLogOverlay");
+const litterLogList = document.getElementById("litterLogList");
 
 /* -------------------------------------------------------------------------- */
 /*                                    INIT                                    */
 /* -------------------------------------------------------------------------- */
+
 function init() {
 	// Auto-Centering Option (Disabled)
 	if (false && "geolocation" in navigator) {
@@ -79,6 +85,19 @@ function init() {
 
 	setupTeleopArrowListeners();
 	setupThemeToggle();
+
+	if (openLitterLogButton) {
+		openLitterLogButton.addEventListener("click", () => {
+			litterLogOverlay.style.display = "flex";
+			renderLitterLog();
+		});
+	}
+
+	if (closeLitterLogModal) {
+		closeLitterLogModal.addEventListener("click", () => {
+			litterLogOverlay.style.display = "none";
+		});
+	}
 }
 
 function setupThemeToggle() {
@@ -114,7 +133,6 @@ function setupThemeToggle() {
 /* -------------------------------------------------------------------------- */
 /*                                    MISC                                    */
 /* -------------------------------------------------------------------------- */
-
 
 function showToast (message, type = "primary") {
 	const colors = {
@@ -466,6 +484,29 @@ function finaliseZoneCreation(bounds) {
 	closePrecisionZoneModal();
 }
 
+/* ----------------------------- LITTER MARKERS ----------------------------- */
+function createLitterMarker(item) {
+	const litterIcon = L.divIcon({
+		className: "litter-marker-icon",
+		html: "L",
+		iconSize: [20, 20],
+		iconAnchor: [10, 10]
+	});
+
+	const marker = L.marker([item.lat, item.lng], { icon: litterIcon }).addTo(map);
+
+	marker.bindPopup(`
+		<div class="litter-popup-content">
+			<strong>LITTER DETECTED</strong><br>
+			<span style="color:var(--textMuted); font-size:0.7rem;">${item.timestamp}</span><br>
+			<hr style="margin:5px 0; border:0; border-top:1px solid #444;">
+			Coordinates: ${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}<br>
+			<img src="${item.imgSrc}" alt="Litter Evidence">
+		</div>
+	`);
+	litterMarkers.push(marker);
+}
+
 /* -------------------------------------------------------------------------- */
 /*                                   SIDEBAR                                  */
 /* -------------------------------------------------------------------------- */
@@ -783,6 +824,7 @@ function assignBinBot(index, binBotId) {
 /* -------------------------------------------------------------------------- */
 /*                                   TELEOP                                   */
 /* -------------------------------------------------------------------------- */
+
 function openTeleop(index) {
 	const r = robots[index];
 
@@ -808,7 +850,8 @@ function addLitterMarker(idx) {
 	const r = robots[idx];
 	const lat = r.lat;
 	const lng = r.lng;
-	const timestamp = new Date().toLocaleTimeString();
+	const now = new Date();
+	const timestamp = now.toLocaleString(); // Includes both date and time
 
 	// Use a canvas to capture a static snapshot from the video feed at this exact moment
 	const feedImg = document.querySelector(".cameraFeed img");
@@ -829,27 +872,48 @@ function addLitterMarker(idx) {
 		}
 	}
 
-	const litterIcon = L.divIcon({
-		className: "litter-marker-icon",
-		html: "L",
-		iconSize: [20, 20],
-		iconAnchor: [10, 10]
-	});
+	const markerData = {
+		timestamp,
+		lat,
+		lng,
+		imgSrc
+	};
 
-	const marker = L.marker([lat, lng], { icon: litterIcon }).addTo(map);
+	litterLogData.push(markerData);
+	createLitterMarker(markerData);
+	renderLitterLog();
 
-	marker.bindPopup(`
-		<div class="litter-popup-content">
-			<strong>LITTER DETECTED</strong><br>
-			<span style="color:var(--textMuted); font-size:0.7rem;">${timestamp}</span><br>
-			<hr style="margin:5px 0; border:0; border-top:1px solid #444;">
-			Coordinates: ${lat.toFixed(5)}, ${lng.toFixed(5)}<br>
-			<img src="${imgSrc}" alt="Litter Evidence">
-		</div>
-	`);
+	// Emit to server to save permanently
+	socket.emit("add_litter_marker", markerData);
 
-	litterMarkers.push(marker);
 	console.log(`Litter marker added at ${lat}, ${lng}`);
+}
+
+function renderLitterLog() {
+	if (!litterLogList) return;
+
+	if (litterLogData.length === 0) {
+		litterLogList.innerHTML = `<div class="emptyStateBox">No litter markers recorded yet.</div>`;
+		return;
+	}
+
+	litterLogList.innerHTML = litterLogData.map((item, i) => `
+		<div class="robotCard" style="margin-bottom: 10px; cursor: default; animation: none;">
+			<div class="cardTop">
+				<span class="robotId">DETECTION #${i + 1}</span>
+				<span class="connectionStatus" style="font-size: 0.7rem; color: var(--textMuted);">${item.timestamp}</span>
+			</div>
+			<div class="cardStats" style="opacity: 1; grid-template-columns: 1fr 1fr; gap: 10px;">
+				<div>
+					<div class="statRow"><span>LAT</span> <span class="statVal">${item.lat.toFixed(6)}</span></div>
+					<div class="statRow"><span>LNG</span> <span class="statVal">${item.lng.toFixed(6)}</span></div>
+				</div>
+				<div style="text-align: right;">
+					<img src="${item.imgSrc}" style="width: 100px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #444;">
+				</div>
+			</div>
+		</div>
+	`).reverse().join("");
 }
 
 function updateTeleopStats() {
@@ -1001,7 +1065,7 @@ function soundBeeper() {
 }
 
 /* -------------------------------------------------------------------------- */
-/*                                LoRa Updates                                */
+/*                               SOCKET UPDATES                               */
 /* -------------------------------------------------------------------------- */
 
 socket.on("heartbeat", (nodeId, payload) => {
@@ -1032,6 +1096,18 @@ socket.on("send_camera_ip_address", (nodeId, payload) => {
 	renderSidebar();
 	updateTeleopStats();
 });
+
+socket.on("litter_update", (data) => {
+	data.forEach(item => {
+		// Avoid duplicates
+		if (!litterLogData.find(l => l.timestamp === item.timestamp && l.lat === item.lat)) {
+			litterLogData.push(item);
+			createLitterMarker(item);
+		}
+	});
+	renderLitterLog();
+});
+
 
 socket.on("add_litter_marker", (nodeId, payload) => {
 	const idx = robots.findIndex(item => item.intId == nodeId);

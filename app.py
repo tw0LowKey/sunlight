@@ -1,9 +1,12 @@
 import logging
 import socket
+from datetime import datetime
 from comms import Comms, PROTOCOL
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
+from json import JSONDecodeError, load, dump
 from os import getenv
+from os.path import exists
 
 __version__ = 1.0
 
@@ -99,9 +102,20 @@ def index():
 def pageNotFound(e):
 	return render_template("404.html"), 404
 
+def load_litter_markers():
+	data_file = "litter_data.json"
+	if exists(data_file):
+		try:
+			with open(data_file, "r") as file:
+				return load(file)
+		except (JSONDecodeError, IOError):
+			pass
+	return []
+
 @socketio.on("connect")
 def on_connect():
 	emit("robot_update", state["robots"])
+	emit("litter_update", load_litter_markers())
 
 @socketio.on("pair_robot")
 def pair_robot(data):
@@ -147,6 +161,30 @@ def send_data(data):
 	payload = { "cmdId": state["comms"].lora.getProtocolCmdId(cmdName), **payload }
 
 	state["comms"].lora.transmit(cmdName, payload, nodeId)
+
+@socketio.on("add_litter_marker")
+def add_litter_marker(data):
+	# Path to the data file
+	data_file = "litter_data.json"
+
+	# Load existing data or start fresh
+	if exists(data_file):
+		try:
+			with open(data_file, "r") as file:
+				litter_markers = load(file)
+		except (JSONDecodeError, IOError):
+			litter_markers = []
+	else:
+		litter_markers = []
+
+	# Add the new marker data
+	litter_markers.append(data)
+
+	# Save back to file
+	with open(data_file, "w") as file:
+		dump(litter_markers, file, indent=4)
+
+	print(f"Litter marker saved: {data.get('timestamp')} at {data.get('lat')}, {data.get('lng')}")
 
 @socketio.on("get_gps_base")
 def get_gps_base():
