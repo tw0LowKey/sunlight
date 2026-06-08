@@ -813,7 +813,7 @@ function assignBinBot(index, binBotId) {
 	if (oldBinBotId !== robot.binBotId) {
 		socket.emit("send_data", {
 			cmdName: "assignBinbot",
-			payload: { "binbotNodeId": robot.binBotId },
+			payload: { "binbotNodeId": parseInt(robot.binBotId) },
 			nodeId: robot.id
 		});
 	}
