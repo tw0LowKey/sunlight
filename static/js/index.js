@@ -901,6 +901,14 @@ function addLitterMarker(idx) {
 	// Emit to server to save permanently
 	socket.emit("add_litter_marker", markerData);
 
+	litterMarkers.push(marker);
+	litterLogData.push({
+		timestamp,
+		lat,
+		lng,
+		imgSrc
+	});
+	renderLitterLog();
 	console.log(`Litter marker added at ${lat}, ${lng}`);
 }
 
@@ -908,7 +916,7 @@ function renderLitterLog() {
 	if (!litterLogList) return;
 
 	if (litterLogData.length === 0) {
-		litterLogList.innerHTML = `<div class="emptyStateBox">No litter markers recorded yet.</div>`;
+		litterLogList.innerHTML = `<div class="emptyStateBox">No litter markers recorded yet</div>`;
 		return;
 	}
 
