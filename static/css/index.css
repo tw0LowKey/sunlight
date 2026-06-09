@@ -585,6 +585,10 @@ body.light-mode .teleopControlsStats {
 	color: var(--accentDanger);
 }
 
+.teleopActionButton.danger:hover {
+	background: rgba(255, 51, 102, 0.1);
+}
+
 .beeperButton {
 	grid-column: span 2;
 }
@@ -594,33 +598,24 @@ body.light-mode .teleopControlsStats {
 }
 
 .emergencyStopButton {
-	background: #ff0000;
-	color: #fff;
-	border: none;
-	padding: 20px;
-	font-size: 1.5rem;
+	grid-column: span 2;
 	font-weight: bold;
-	border-radius: 8px;
-	cursor: pointer;
-	text-align: center;
-	transition: 0.2s;
-	box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
-	margin-top: auto;
-}
-
-.emergencyStopButton:hover {
-	background: #cc0000;
-	box-shadow: 0 0 30px rgba(255, 0, 0, 0.6);
+	letter-spacing: 1px;
 }
 
 .emergencyStopButton:active {
-	transform: scale(0.95);
+	transform: scale(0.98);
 }
 
 .teleopActionButton.primary {
 	border-color: var(--accentPrimary);
 	color: var(--accentPrimary);
 }
+
+.teleopActionButton.primary:hover {
+	background: rgba(0, 255, 204, 0.1);
+}
+
 
 /* --- LITTER MARKERS --- */
 .litter-marker-icon {
