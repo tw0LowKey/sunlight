@@ -37,6 +37,7 @@ let accentDanger = "#ff3366";
 let drawnItems;
 let map;
 let tileLayer;
+let drawControl;
 let selectedZoneId = null;
 let startLat = 53.52902931948096;
 let startLng = -2.2629539937033964;
@@ -181,7 +182,7 @@ function initMap() {
 	drawnItems = new L.FeatureGroup();
 	map.addLayer(drawnItems);
 
-	const drawControl = new L.Control.Draw({
+	drawControl = new L.Control.Draw({
 		position: "topright",
 		draw: {
 			polygon: false,
@@ -209,6 +210,8 @@ function initMap() {
 
 		if (drawRectButton) {
 			drawRectButton.title = "Click to Draw / Dbl-Click for Precision";
+			drawRectButton.removeAttribute("href");
+
 			drawRectButton.addEventListener("dblclick", (e) => {
 				e.stopPropagation();
 				e.preventDefault();
@@ -338,6 +341,12 @@ function deselectZone() {
 function openPrecisionZoneModal() {
 	document.getElementById("precisionZoneOverlay").style.display = "flex";
 
+	// Ensure manual draw tool is deactivated
+	if (drawControl) {
+		const handler = drawControl._toolbars.draw._modes.rectangle.handler;
+		if (handler && handler.enabled()) handler.disable();
+	}
+
 	// Check if the GPS Base tab is open to show / hide the refresh button
 	const activeTab = document.querySelector(".precisionZoneTabContent.active");
 	const refreshBtn = document.getElementById("refreshGPSBase");
@@ -351,6 +360,12 @@ function openPrecisionZoneModal() {
 
 function closePrecisionZoneModal() {
 	document.getElementById("precisionZoneOverlay").style.display = "none";
+
+	// Ensure manual draw tool is deactivated when closing
+	if (drawControl) {
+		const handler = drawControl._toolbars.draw._modes.rectangle.handler;
+		if (handler && handler.enabled()) handler.disable();
+	}
 }
 
 async function refreshGPSBaseData() {

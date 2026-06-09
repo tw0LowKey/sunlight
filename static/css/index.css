@@ -618,6 +618,9 @@ body.light-mode .teleopControlsStats {
 	background: rgba(0, 255, 204, 0.1);
 }
 
+.leaflet-draw-draw-rectangle:hover {
+	cursor: pointer;
+}
 
 /* --- LITTER MARKERS --- */
 .litter-marker-icon {
