@@ -489,11 +489,10 @@ body.light-mode .teleopHeader {
 	position: relative;
 }
 
-.cameraFeed img {
+.cameraFeed iframe {
 	width: 100%;
 	height: 100%;
-	object-fit: cover;
-	opacity: 0.8;
+	border: none;
 }
 
 .teleopControls {
