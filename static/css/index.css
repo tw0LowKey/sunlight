@@ -591,6 +591,11 @@ body.light-mode .teleopControlsStats {
 	background: rgba(255, 51, 102, 0.1);
 }
 
+.teleopActionButton.danger.toggled {
+	background: var(--accentDanger);
+	color: white;
+}
+
 .beeperButton {
 	grid-column: span 2;
 }

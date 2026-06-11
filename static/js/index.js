@@ -16,7 +16,11 @@ socket.on("robot_update", (data) => {
 	// Sync robots array while preserving marker references
 	const newRobots = data.map(updated => {
 		const existing = robots.find(r => r.id === updated.id);
-		return { ...updated, marker: existing ? existing.marker : null };
+		return { 
+			...updated, 
+			marker: existing ? existing.marker : null,
+			isStopped: existing ? (existing.isStopped || false) : false
+		};
 	});
 
 	// Remove markers for robots no longer in the list
@@ -601,6 +605,11 @@ function updateRobotCard(card, r, index, isActive) {
 		statusText = "Online"; dotClass = "connected";
 		if (r.status === "working") { statusText = "Working"; dotClass = "working"; }
 		if (r.status === "manual") { statusText = "Manual"; dotClass = "manual"; }
+
+		if (r.isStopped) {
+			statusText = "STOPPED";
+			dotClass = "manual"; // Red dot
+		}
 	}
 
 	const latStr = r.lat.toFixed(5);
@@ -652,6 +661,11 @@ function createRobotCard(r, index, isActive) {
 		statusText = "Online"; dotClass = "connected";
 		if (r.status === "working") { statusText = "Working"; dotClass = "working"; }
 		if (r.status === "manual") { statusText = "Manual"; dotClass = "manual"; }
+
+		if (r.isStopped) {
+			statusText = "STOPPED";
+			dotClass = "manual"; // Red dot
+		}
 	}
 
 	const latStr = r.lat.toFixed(5);
@@ -945,11 +959,22 @@ function updateTeleopStats() {
 	const r = robots[teleopIndex];
 	document.getElementById("teleBatt").innerText = `${r.batt}%`;
 	document.getElementById("teleLoc").innerText = `${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}`;
-	document.getElementById("teleCamera").src = `http://${r.ip}:8080/stream?topic=/camera/color/image_raw&type=mjpeg&qos_profile=sensor_data&width=424&height=240&quality=35&default_transport=compressed`;
+	document.getElementById("teleCamera").src = `http://${r.ip}:8889/robot`;
 
 	const statusEl = document.getElementById("teleStatus");
-	statusEl.innerText = r.status.toUpperCase();
-	statusEl.style.color = r.status === "manual" ? "var(--accentDanger)" : "var(--accentPrimary)";
+	const stopBtn = document.getElementById("teleopEmergencyStopButton");
+
+	if (r.isStopped) {
+		statusEl.innerText = "STOPPED";
+		statusEl.style.color = "var(--accentDanger)";
+		stopBtn.classList.add("toggled");
+		stopBtn.innerText = "RESUME OPERATION";
+	} else {
+		statusEl.innerText = r.status.toUpperCase();
+		statusEl.style.color = r.status === "manual" ? "var(--accentDanger)" : "var(--accentPrimary)";
+		stopBtn.classList.remove("toggled");
+		stopBtn.innerText = "EMERGENCY STOP";
+	}
 }
 
 function setupTeleopArrowListeners() {
@@ -1066,14 +1091,22 @@ function resumeAuto() {
 function emergencyStop() {
 	if (teleopIndex === null) return;
 
-	console.log(`EMERGENCY STOP for ${robots[teleopIndex].id}`);
+	const r = robots[teleopIndex];
+	r.isStopped = !r.isStopped;
+
+	console.log(`EMERGENCY STOP ${r.isStopped ? "ENABLED" : "DISABLED"} for ${r.id}`);
+	
 	socket.emit("send_data", {
-		cmdName: "movement",
-		payload: { "direction": "S" }, // 'S' for Stop
-		nodeId: robots[teleopIndex].intId
+		cmdName: "toggleVirtualEmergencyStop",
+		payload: { "enabled": r.isStopped },
+		nodeId: r.intId
 	});
 
-	robots[teleopIndex].status = "online";
+	// If we just stopped, force status to online/manual to stop current action
+	if (r.isStopped) {
+		r.status = "online";
+	}
+
 	updateMapMarkers();
 	renderSidebar();
 	updateTeleopStats();

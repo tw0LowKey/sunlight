@@ -19,6 +19,7 @@ PROTOCOL = {
 	"9":  { "name": "sendFollowerToLeader", "structFormat": "!Bi?ff?", "keys": ["cmdId", "seq", "parked", "park_x", "park_y", "bin_ready"] },
 	"10": { "name": "assignBinbot", "structFormat": "!Bi", "keys": ["cmdId", "binbotNodeId"] },
 	"11": { "name": "addLitterMarker", "structFormat": "!B", "keys": ["cmdId"] },
+	"12": { "name": "toggleVirtualEmergencyStop", "structFormat": "!B?", "keys": ["cmdId", "enabled"] },
 }
 
 class Bluetooth:
