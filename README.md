@@ -37,7 +37,7 @@ Sunlight is the custom, full-stack user interface designed to serve as the centr
     export FLASK_SECRET_KEY="your-secret-key"
     ```
 
-4.  Connect the RFM9x LoRa module to the Arduino - an Arduino Mega 2560 is shown in the diagram below:
+4.  An Arduino is connected to the operator's laptop to communicate with the Adafruit RFM9x LoRa module. Connect the Arduino to the laptop via a USB and connect the RFM9x LoRa module to the Arduino - an Arduino Mega 2560 is shown in the diagram below:
     ![Arduino Mega 2560 Wiring Diagram](wiring_diagram.svg)
 
 ## Usage
