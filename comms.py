@@ -1,10 +1,12 @@
 import asyncio
 import struct
 from bleak import BleakScanner, BleakClient
+from concurrent.futures import Future
 from json import dumps
 from serial import Serial
 from threading import Lock, Thread
 from time import sleep, time
+from typing import Any, Callable, Optional
 
 PROTOCOL = {
 	"0":  { "name": "heartbeat", "structFormat": "!Bhdd", "keys": ["cmdId", "battery", "lat", "lng"] },
@@ -54,13 +56,13 @@ class Bluetooth:
 			self.startScanning()
 
 	def _startBackgroundLoop(self) -> None:
-		""" This runs continuously in the background thread """
+		""" This runs continuously in the background thread to maintain the asyncio event loop """
 
 		asyncio.set_event_loop(self.loop)
 		self.loop.run_forever()
 
 	def _nearbyRobotUpdateCallback(self, device: Any, advData: Any) -> None:
-		""" This is called whenever the signal strength of any device has changed """
+		""" Callback triggered when a device's advertisement data is updated """
 
 		with self._nearbyBtRobotsDictLock:
 			self.nearbyBtRobotsDict[device.address] = {
@@ -78,6 +80,8 @@ class Bluetooth:
 			self._btUpdateCallback(self.nearbyBtRobots)
 
 	def _cleanupStaleDevices(self) -> None:
+		""" Periodically removes devices that haven't been seen within the timeout period """
+
 		while True:
 			with self._nearbyBtRobotsDictLock:
 				stale = [
@@ -99,22 +103,24 @@ class Bluetooth:
 			sleep(1.0)
 
 	def setBtUpdateCallback(self, callback: Callable[[list[dict]], None]) -> None:
+		""" Sets the callback function to be called when the list of nearby robots changes """
+
 		self._btUpdateCallback = callback
 
 	def startScanning(self) -> None:
-		""" Synchronous wrapper to start scanning. Blocks until started """
+		""" Synchronous wrapper to start scanning - blocks until started """
 
 		future = asyncio.run_coroutine_threadsafe(self._asyncStartScanning(), self.loop)
 		future.result()
 
 	def stopScanning(self) -> None:
-		""" Synchronous wrapper to stop scanning. Blocks until stopped """
+		""" Synchronous wrapper to stop scanning - blocks until stopped """
 
 		future = asyncio.run_coroutine_threadsafe(self._asyncStopScanning(), self.loop)
 		future.result()
 
 	def provision(self, macAddress: str, loraId: int, secretKey: str) -> Future:
-		""" Synchronous wrapper for provisioning """
+		""" Synchronous wrapper for provisioning a robot via BLE """
 
 		return asyncio.run_coroutine_threadsafe(
 			self._asyncProvision(macAddress, loraId, secretKey),
@@ -122,14 +128,20 @@ class Bluetooth:
 		)
 
 	async def _asyncStartScanning(self) -> None:
+		""" Asynchronously starts the BLE scanner """
+
 		await self.scanner.start()
 		print("[ BT ]: Scanning Started")
 
 	async def _asyncStopScanning(self) -> None:
+		""" Asynchronously stops the BLE scanner """
+
 		await self.scanner.stop()
 		print("[ BT ]: Scanning Stopped")
 
 	async def _asyncProvision(self, macAddress: str, loraNodeId: int, secretKey: str) -> bool:
+		""" Asynchronously provisions a robot with LoRa configuration """
+
 		print("[ BT ]: Attempting to Connect")
 
 		# Properly stop the instance-based scanner
@@ -202,6 +214,8 @@ class Lora:
 			sleep(0.1)
 
 	def _listen(self) -> None:
+		""" Continuously listens for incoming serial data from the LoRa module """
+
 		while self.ser:
 			if self.ser.in_waiting > 0:
 				line = self.ser.readline().decode("utf-8", errors="replace").strip()
@@ -235,6 +249,8 @@ class Lora:
 					print(f"[LoRa]: {line}")
 
 	def transmit(self, cmdName: str, payload: dict, nodeId: int) -> None:
+		""" Transmits a command over LoRa """
+
 		# Encode the data
 		for cid, info in PROTOCOL.items():
 			if info["name"] == cmdName:
@@ -270,6 +286,8 @@ class Lora:
 			print(f"Received unknown command from UCS: {cmdName}")
 
 	def getProtocolCmdId(self, cmdName: str) -> Optional[int]:
+		""" Gets the command ID for a given command name from the protocol """
+
 		for cmdId, info in PROTOCOL.items():
 			if info["name"] == cmdName:
 				return int(cmdId)
@@ -277,6 +295,8 @@ class Lora:
 		return None
 
 	def setLoraCallback(self, callback: Callable[[str, str, dict], None]):
+		""" Sets the callback function to be called when a LoRa packet is received """
+
 		self._loraUpdateCallback = callback
 
 class Comms:

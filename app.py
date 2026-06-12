@@ -1,6 +1,5 @@
 import logging
 import socket
-from datetime import datetime
 from comms import Comms, PROTOCOL
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
@@ -33,6 +32,11 @@ state = {
 }
 
 def onBtUpdate(nearbyRobots: list[dict]) -> None:
+	"""
+	Callback triggered when the list of nearby Bluetooth robots is updated
+	Updates the global state and emits a 'robot_update' event to the frontend if changes occurred
+	"""
+
 	nearbyDict = { n["id"]: n for n in nearbyRobots }
 	newRobots = []
 
@@ -77,6 +81,11 @@ def onBtUpdate(nearbyRobots: list[dict]) -> None:
 		socketio.emit("robot_update", state["robots"])
 
 def onLoraUpdate(cmdName: str, nodeId: str, payload: dict) -> None:
+	"""
+	Callback triggered when a LoRa update is received from a robot
+	Emits appropriate events to the frontend based on the command received
+	"""
+
 	if cmdName == "heartbeat":
 		socketio.emit("heartbeat", (nodeId, payload))
 	elif cmdName == "sendCameraIpAddress":
@@ -92,13 +101,19 @@ def onLoraUpdate(cmdName: str, nodeId: str, payload: dict) -> None:
 
 @app.route("/")
 def index() -> str:
+	""" Renders the main dashboard page """
+
 	return render_template("index.html", version=__version__, PROTOCOL=PROTOCOL)
 
 @app.errorhandler(404)
 def pageNotFound(e: Exception) -> tuple[str, int]:
+	""" Handles 404 errors by rendering a custom 404 page """
+
 	return render_template("404.html"), 404
 
 def loadLitterMarkers() -> list[dict]:
+	""" Loads litter marker data from a local JSON file """
+
 	dataFile = "litter_data.json"
 
 	if exists(dataFile):
@@ -112,11 +127,15 @@ def loadLitterMarkers() -> list[dict]:
 
 @socketio.on("connect")
 def onConnect() -> None:
+	""" Handles a new frontend connection - emits current robot and litter marker data to the newly connected client """
+
 	emit("robot_update", state["robots"])
 	emit("litter_update", loadLitterMarkers())
 
 @socketio.on("pair_robot")
 def pairRobot(data: dict) -> None:
+	""" Initiates the pairing process for a robot selected from the frontend sidebar """
+
 	targetRobotId = data["id"]
 	targetRobotMac = data["mac"]
 
@@ -150,6 +169,8 @@ def pairRobot(data: dict) -> None:
 
 @socketio.on("send_data")
 def sendData(data: dict) -> None:
+	""" Sends data to a robot via LoRa """
+
 	cmdName = data.get("cmdName")
 	payload = data.get("payload")
 	nodeId = data.get("nodeId")
@@ -162,6 +183,8 @@ def sendData(data: dict) -> None:
 
 @socketio.on("add_litter_marker")
 def addLitterMarker(data: dict) -> None:
+	""" Adds a new litter marker to the local JSON storage """
+
 	# Path to the data file
 	dataFile = "litter_data.json"
 
@@ -186,6 +209,8 @@ def addLitterMarker(data: dict) -> None:
 
 @socketio.on("get_gps_base")
 def getGpsBase() -> dict:
+	""" Retrieves GPS data from the base station """
+
 	try:
 		# Create a socket
 		clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
