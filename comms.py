@@ -23,113 +23,113 @@ PROTOCOL = {
 }
 
 class Bluetooth:
-	def __init__(self, service_uuid: str, char_uuid: str, autostart: bool = True):
-		self.char_uuid = char_uuid
+	def __init__(self, serviceUuid: str, charUuid: str, autostart: bool = True):
+		self.charUuid = charUuid
 		self.client = None
-		self.nearby_bt_robots = []
-		self.nearby_bt_robots_dict = {}
-		self.service_uuid = service_uuid
+		self.nearbyBtRobots = []
+		self.nearbyBtRobotsDict = {}
+		self.serviceUuid = serviceUuid
 		self.timeout = 30.0 # Needs to be a large value as the devices may have a stable signal for a long time
-		self._bt_update_callback = None
-		self._nearby_bt_robots_dict_lock = Lock()
+		self._btUpdateCallback = None
+		self._nearbyBtRobotsDictLock = Lock()
 
 		self.scanner = BleakScanner(
-			service_uuids=[service_uuid],
+			service_uuids=[serviceUuid],
 			scanning_mode="active",
-			detection_callback=self._nearby_robot_update_callback
+			detection_callback=self._nearbyRobotUpdateCallback
 		)
 
 		# Create a dedicated event loop for this class
 		self.loop = asyncio.new_event_loop()
 
 		# Start the main loop in a background daemon thread
-		self._loop_thread = Thread(target=self._start_background_loop, daemon=True)
-		self._loop_thread.start()
+		self._loopThread = Thread(target=self._startBackgroundLoop, daemon=True)
+		self._loopThread.start()
 
 		# Start the cleanup loop in a background daemon thread
-		self._cleanup_thread = Thread(target=self._cleanup_stale_devices, daemon=True)
-		self._cleanup_thread.start()
+		self._cleanupThread = Thread(target=self._cleanupStaleDevices, daemon=True)
+		self._cleanupThread.start()
 
 		if autostart:
-			self.start_scanning()
+			self.startScanning()
 
-	def _start_background_loop(self):
+	def _startBackgroundLoop(self) -> None:
 		""" This runs continuously in the background thread """
 
 		asyncio.set_event_loop(self.loop)
 		self.loop.run_forever()
 
-	def _nearby_robot_update_callback(self, device, adv_data):
+	def _nearbyRobotUpdateCallback(self, device: Any, advData: Any) -> None:
 		""" This is called whenever the signal strength of any device has changed """
 
-		with self._nearby_bt_robots_dict_lock:
-			self.nearby_bt_robots_dict[device.address] = {
+		with self._nearbyBtRobotsDictLock:
+			self.nearbyBtRobotsDict[device.address] = {
 				"id": device.name,
 				"mac": device.address,
-				"rssi": adv_data.rssi,
+				"rssi": advData.rssi,
 				"last_seen": time()
 			}
 
 		# Update list
-		self.nearby_bt_robots = list(self.nearby_bt_robots_dict.values())
+		self.nearbyBtRobots = list(self.nearbyBtRobotsDict.values())
 
 		# Run the callback if it has been set
-		if self._bt_update_callback:
-			self._bt_update_callback(self.nearby_bt_robots)
+		if self._btUpdateCallback:
+			self._btUpdateCallback(self.nearbyBtRobots)
 
-	def _cleanup_stale_devices(self):
+	def _cleanupStaleDevices(self) -> None:
 		while True:
-			with self._nearby_bt_robots_dict_lock:
+			with self._nearbyBtRobotsDictLock:
 				stale = [
-					mac for mac, robot in self.nearby_bt_robots_dict.items()
+					mac for mac, robot in self.nearbyBtRobotsDict.items()
 					if (time() - robot["last_seen"]) > self.timeout
 				]
 
 				for mac in stale:
-					del self.nearby_bt_robots_dict[mac]
+					del self.nearbyBtRobotsDict[mac]
 
 				if len(stale) != 0:
 					# Update list
-					self.nearby_bt_robots = list(self.nearby_bt_robots_dict.values())
+					self.nearbyBtRobots = list(self.nearbyBtRobotsDict.values())
 
 					# Run the callback if it has been set
-					if self._bt_update_callback:
-						self._bt_update_callback(self.nearby_bt_robots)
+					if self._btUpdateCallback:
+						self._btUpdateCallback(self.nearbyBtRobots)
 
 			sleep(1.0)
 
-	def set_bt_update_callback(self, callback):
-		self._bt_update_callback = callback
+	def setBtUpdateCallback(self, callback: Callable[[list[dict]], None]) -> None:
+		self._btUpdateCallback = callback
 
-	def start_scanning(self):
+	def startScanning(self) -> None:
 		""" Synchronous wrapper to start scanning. Blocks until started """
 
-		future = asyncio.run_coroutine_threadsafe(self._async_start_scanning(), self.loop)
+		future = asyncio.run_coroutine_threadsafe(self._asyncStartScanning(), self.loop)
 		future.result()
 
-	def stop_scanning(self):
+	def stopScanning(self) -> None:
 		""" Synchronous wrapper to stop scanning. Blocks until stopped """
 
-		future = asyncio.run_coroutine_threadsafe(self._async_stop_scanning(), self.loop)
+		future = asyncio.run_coroutine_threadsafe(self._asyncStopScanning(), self.loop)
 		future.result()
 
-	def provision(self, mac_address, lora_id, secret_key):
+	def provision(self, macAddress: str, loraId: int, secretKey: str) -> Future:
 		""" Synchronous wrapper for provisioning """
 
 		return asyncio.run_coroutine_threadsafe(
-			self._async_provision(mac_address, lora_id, secret_key),
+			self._asyncProvision(macAddress, loraId, secretKey),
 			self.loop
 		)
 
-	async def _async_start_scanning(self):
+	async def _asyncStartScanning(self) -> None:
 		await self.scanner.start()
 		print("[ BT ]: Scanning Started")
 
-	async def _async_stop_scanning(self):
+	async def _asyncStopScanning(self) -> None:
 		await self.scanner.stop()
 		print("[ BT ]: Scanning Stopped")
 
-	async def _async_provision(self, mac_address, loraNodeId, secret_key):
+	async def _asyncProvision(self, macAddress: str, loraNodeId: int, secretKey: str) -> bool:
 		print("[ BT ]: Attempting to Connect")
 
 		# Properly stop the instance-based scanner
@@ -140,10 +140,10 @@ class Bluetooth:
 			pass # Ignore error if it wasn't running
 
 		# Connect using the Client
-		self.client = BleakClient(mac_address, timeout=30.0)
+		self.client = BleakClient(macAddress, timeout=30.0)
 
 		try:
-			print(f"[ BT ]: Connecting to {mac_address}...")
+			print(f"[ BT ]: Connecting to {macAddress}...")
 			for attempt in range(3):
 				try:
 					await self.client.connect()
@@ -156,21 +156,21 @@ class Bluetooth:
 
 			print("[ BT ]: Connected - Sending Initial Payload")
 
-			payload_data = {
+			payloadData = {
 				"loraNodeId": loraNodeId,
-				"secretKey": secret_key,
+				"secretKey": secretKey,
 				"protocol": PROTOCOL
 			}
-			payload = dumps(payload_data, separators=(",", ":")).encode("utf-8")
+			payload = dumps(payloadData, separators=(",", ":")).encode("utf-8")
 
 			# Automatically chunk based on negotiated MTU
-			characteristic = self.client.services.get_characteristic(self.char_uuid)
+			characteristic = self.client.services.get_characteristic(self.charUuid)
 			chunkSize = characteristic.max_write_without_response_size - 10
 			print(f"[ BT ]: Payload Size: {len(payload)} bytes - Chunking into {chunkSize} byte segments")
 
 			for i in range(0, len(payload), chunkSize):
 				chunk = payload[i:i + chunkSize]
-				await self.client.write_gatt_char(self.char_uuid, chunk)
+				await self.client.write_gatt_char(self.charUuid, chunk)
 
 			print("[ BT ]: Provisioning Successful")
 
@@ -183,9 +183,9 @@ class Bluetooth:
 			return False
 
 class Lora:
-	def __init__(self, port="/dev/arduino_mega", baud=115200):
+	def __init__(self, port: str = "/dev/arduino_mega", baud: int = 115200):
 		self.ready = False
-		self._lora_update_callback = None
+		self._loraUpdateCallback = None
 
 		try:
 			self.ser = Serial(port, baud, timeout=1)
@@ -201,7 +201,7 @@ class Lora:
 		while not self.ready:
 			sleep(0.1)
 
-	def _listen(self):
+	def _listen(self) -> None:
 		while self.ser:
 			if self.ser.in_waiting > 0:
 				line = self.ser.readline().decode("utf-8", errors="replace").strip()
@@ -214,27 +214,27 @@ class Lora:
 				# Check for formatted packet (node_id:payload)
 				if ":" in line:
 					try:
-						node_id, hex_payload = line.split(":", 1)
-						data = bytes.fromhex(hex_payload)
-						cmd_id = data[0]
+						nodeId, hexPayload = line.split(":", 1)
+						data = bytes.fromhex(hexPayload)
+						cmdId = data[0]
 
 						# Look up the command in the protocol
-						cmd_info = PROTOCOL.get(str(cmd_id))
-						if cmd_info and "structFormat" in cmd_info:
-							unpacked = struct.unpack(cmd_info["structFormat"], data)
-							payload_dict = dict(zip(cmd_info["keys"], unpacked)) # Zip keys and values into a dictionary
-							print(f"[LoRa]: {node_id} ({cmd_info['name']}): {payload_dict}")
+						cmdInfo = PROTOCOL.get(str(cmdId))
+						if cmdInfo and "structFormat" in cmdInfo:
+							unpacked = struct.unpack(cmdInfo["structFormat"], data)
+							payloadDict = dict(zip(cmdInfo["keys"], unpacked)) # Zip keys and values into a dictionary
+							print(f"[LoRa]: {nodeId} ({cmdInfo['name']}): {payloadDict}")
 
-							if self._lora_update_callback is not None:
-								self._lora_update_callback(cmd_info["name"], node_id, payload_dict)
+							if self._loraUpdateCallback is not None:
+								self._loraUpdateCallback(cmdInfo["name"], nodeId, payloadDict)
 						else:
-							print(f"[LoRa]: {node_id} (Unknown ID {cmd_id}): {hex_payload}")
+							print(f"[LoRa]: {nodeId} (Unknown ID {cmdId}): {hexPayload}")
 					except Exception as e:
 						print(f"[LoRa]: Raw - {line} (Parse Error: {e})")
 				else:
 					print(f"[LoRa]: {line}")
 
-	def transmit(self, cmdName: str, payload: dict, node_id: int):
+	def transmit(self, cmdName: str, payload: dict, nodeId: int) -> None:
 		# Encode the data
 		for cid, info in PROTOCOL.items():
 			if info["name"] == cmdName:
@@ -261,48 +261,48 @@ class Lora:
 
 					# Send the data to the arduino
 					if self.ser:
-						print(f"[LoRa]: Sending {node_id:02}:{payload} ({packed.hex()})")
-						self.ser.write(f"{node_id:02}:{packed.hex()}\n".encode("utf-8"))
+						print(f"[LoRa]: Sending {nodeId:02}:{payload} ({packed.hex()})")
+						self.ser.write(f"{nodeId:02}:{packed.hex()}\n".encode("utf-8"))
 
 				break
 		else:
 			# Simple command with just the ID as a single byte hex
 			print(f"Received unknown command from UCS: {cmdName}")
 
-	def getProtocolCmdId(self, cmdName: str):
+	def getProtocolCmdId(self, cmdName: str) -> Optional[int]:
 		for cmdId, info in PROTOCOL.items():
 			if info["name"] == cmdName:
 				return int(cmdId)
 
 		return None
 
-	def set_lora_callback(self, callback):
-		self._lora_update_callback = callback
+	def setLoraCallback(self, callback: Callable[[str, str, dict], None]):
+		self._loraUpdateCallback = callback
 
 class Comms:
 	def __init__(self):
 		# UUIDs should match the Jetson's BLE Server
-		self.service_uuid = "036f33e0-9573-4b0e-88d1-18af960d5a95"
-		self.char_uuid = "92eda5fb-c187-4f41-aaf2-3931b9cb4c56"
+		self.serviceUuid = "036f33e0-9573-4b0e-88d1-18af960d5a95"
+		self.charUuid = "92eda5fb-c187-4f41-aaf2-3931b9cb4c56"
 
 		self.lora = Lora()
 		while not self.lora.ready:
 			sleep(0.1)
 
-		self.bt = Bluetooth(self.service_uuid, self.char_uuid)
+		self.bt = Bluetooth(self.serviceUuid, self.charUuid)
 
-	def connect_new_robot(self, mac, lora_id, encryption_key):
+	def connectNewRobot(self, mac: str, loraId: int, encryptionKey: str) -> bool:
 		""" High-level method to pair a robot and assign it a LoRa ID """
 
 		# Stop scanning while connecting to avoid radio interference
-		self.bt.stop_scanning()
+		self.bt.stopScanning()
 
 		# Provision via BLE
-		future = self.bt.provision(mac, lora_id, encryption_key)
+		future = self.bt.provision(mac, loraId, encryptionKey)
 		success = future.result() # Wait for the result
 
 		# Resume scanning
-		self.bt.start_scanning()
+		self.bt.startScanning()
 
 		return success
 
@@ -314,9 +314,9 @@ if __name__ == "__main__":
 			cmd = input("Command: ")
 
 			if cmd == "list":
-				print(f"Nearby: {comms.bt.nearby_bt_robots}")
+				print(f"Nearby: {comms.bt.nearbyBtRobots}")
 			elif cmd == "pair":
-				comms.connect_new_robot("F8:3D:C6:56:B1:BA", 67, "password123321")
+				comms.connectNewRobot("F8:3D:C6:56:B1:BA", 67, "password123321")
 			elif cmd:
 				comms.lora.transmit(cmd, 67)
 	except KeyboardInterrupt:

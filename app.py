@@ -30,40 +30,36 @@ if not app.config["SECRET_KEY"]:
 state = {
 	"comms": None,
 	"robots": []
-	# "robots": [
-	# 	{ "id": "R-007", "status": "idle", "connected": True, "batt": 42, "lat": 53.52999682543191, "lng": -2.2593507826159829, "zoneId": None, "marker": None },
-	# 	{ "id": "R-067", "status": "idle", "connected": False, "batt": 87, "lat": 53.53220795931625, "lng": -2.2649145104813844, "zoneId": None, "marker": None },
-	# ]
 }
 
-def on_bt_update(nearby_robots):
-	nearby_dict = { n["id"]: n for n in nearby_robots }
-	new_robots = []
+def onBtUpdate(nearbyRobots: list[dict]) -> None:
+	nearbyDict = { n["id"]: n for n in nearbyRobots }
+	newRobots = []
 
 	# Process existing robots
 	for r in state["robots"]:
 		# Keep connected or pairing robots regardless of proximity
 		if r.get("connected") or r.get("status") == "pairing":
-			new_robots.append(r)
+			newRobots.append(r)
 		# Keep idle or failed robots ONLY if they are still nearby
-		elif r["id"] in nearby_dict:
+		elif r["id"] in nearbyDict:
 			# Update MAC if it changed, but keep status (idle / failed)
-			r["mac"] = nearby_dict[r["id"]]["mac"]
-			new_robots.append(r)
+			r["mac"] = nearbyDict[r["id"]]["mac"]
+			newRobots.append(r)
 		else:
 			pass
 
 	# Add brand new robots found nearby
-	existing_ids = {r["id"] for r in new_robots}
-	for nid, nrobot in nearby_dict.items():
-		if nid not in existing_ids:
-			if "R-" in nid:
-				new_robots.append({
-					"id": nrobot["id"],
-					"intId": int(nrobot["id"].split("-")[-1]),
+	existingIds = {r["id"] for r in newRobots}
+	for nId, nRobot in nearbyDict.items():
+		if nId not in existingIds:
+			if "R-" in nId:
+				newRobots.append({
+					"id": nRobot["id"],
+					"intId": int(nRobot["id"].split("-")[-1]),
 					"binbotId": None,
 					"ip": None,
-					"mac": nrobot["mac"],
+					"mac": nRobot["mac"],
 					"status": "idle",
 					"connected": False,
 					"batt": 0,
@@ -73,14 +69,14 @@ def on_bt_update(nearby_robots):
 				})
 
 	# Only emit if the robot list has structurally changed
-	new_summary = [(r["id"], r["status"], r["connected"]) for r in new_robots]
-	old_summary = [(r["id"], r["status"], r["connected"]) for r in state["robots"]]
+	newSummary = [(r["id"], r["status"], r["connected"]) for r in newRobots]
+	oldSummary = [(r["id"], r["status"], r["connected"]) for r in state["robots"]]
 
-	if new_summary != old_summary:
-		state["robots"] = new_robots
+	if newSummary != oldSummary:
+		state["robots"] = newRobots
 		socketio.emit("robot_update", state["robots"])
 
-def on_lora_update(cmdName, nodeId, payload):
+def onLoraUpdate(cmdName: str, nodeId: str, payload: dict) -> None:
 	if cmdName == "heartbeat":
 		socketio.emit("heartbeat", (nodeId, payload))
 	elif cmdName == "sendCameraIpAddress":
@@ -95,30 +91,32 @@ def on_lora_update(cmdName, nodeId, payload):
 # ---------------------------------------------------------------------------- #
 
 @app.route("/")
-def index():
+def index() -> str:
 	return render_template("index.html", version=__version__, PROTOCOL=PROTOCOL)
 
 @app.errorhandler(404)
-def pageNotFound(e):
+def pageNotFound(e: Exception) -> tuple[str, int]:
 	return render_template("404.html"), 404
 
-def load_litter_markers():
-	data_file = "litter_data.json"
-	if exists(data_file):
+def loadLitterMarkers() -> list[dict]:
+	dataFile = "litter_data.json"
+
+	if exists(dataFile):
 		try:
-			with open(data_file, "r") as file:
+			with open(dataFile, "r") as file:
 				return load(file)
 		except (JSONDecodeError, IOError):
 			pass
+
 	return []
 
 @socketio.on("connect")
-def on_connect():
+def onConnect() -> None:
 	emit("robot_update", state["robots"])
-	emit("litter_update", load_litter_markers())
+	emit("litter_update", loadLitterMarkers())
 
 @socketio.on("pair_robot")
-def pair_robot(data):
+def pairRobot(data: dict) -> None:
 	targetRobotId = data["id"]
 	targetRobotMac = data["mac"]
 
@@ -130,7 +128,7 @@ def pair_robot(data):
 	socketio.emit("robot_update", state["robots"])
 
 	# Pair to the robot
-	success = state["comms"].connect_new_robot(targetRobotMac, int(targetRobotId.split("-")[-1]), "password123321")
+	success = state["comms"].connectNewRobot(targetRobotMac, int(targetRobotId.split("-")[-1]), "password123321")
 
 	if success:
 		for r in state["robots"]:
@@ -151,7 +149,7 @@ def pair_robot(data):
 	socketio.emit("robot_update", state["robots"])
 
 @socketio.on("send_data")
-def send_data(data):
+def sendData(data: dict) -> None:
 	cmdName = data.get("cmdName")
 	payload = data.get("payload")
 	nodeId = data.get("nodeId")
@@ -163,49 +161,49 @@ def send_data(data):
 	state["comms"].lora.transmit(cmdName, payload, nodeId)
 
 @socketio.on("add_litter_marker")
-def add_litter_marker(data):
+def addLitterMarker(data: dict) -> None:
 	# Path to the data file
-	data_file = "litter_data.json"
+	dataFile = "litter_data.json"
 
 	# Load existing data or start fresh
-	if exists(data_file):
+	if exists(dataFile):
 		try:
-			with open(data_file, "r") as file:
-				litter_markers = load(file)
+			with open(dataFile, "r") as file:
+				litterMarkers = load(file)
 		except (JSONDecodeError, IOError):
-			litter_markers = []
+			litterMarkers = []
 	else:
-		litter_markers = []
+		litterMarkers = []
 
 	# Add the new marker data
-	litter_markers.append(data)
+	litterMarkers.append(data)
 
 	# Save back to file
-	with open(data_file, "w") as file:
-		dump(litter_markers, file, indent=4)
+	with open(dataFile, "w") as file:
+		dump(litterMarkers, file, indent=4)
 
 	print(f"Litter marker saved: {data.get('timestamp')} at {data.get('lat')}, {data.get('lng')}")
 
 @socketio.on("get_gps_base")
-def get_gps_base():
+def getGpsBase() -> dict:
 	try:
 		# Create a socket
-		client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		client_socket.settimeout(2.0) # 2 second timeout
+		clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		clientSocket.settimeout(2.0) # 2 second timeout
 
 		# Connect to the server
-		client_socket.connect((GPS_BASE_STATION_HOST, GPS_BASE_STATION_PORT))
+		clientSocket.connect((GPS_BASE_STATION_HOST, GPS_BASE_STATION_PORT))
 
 		# Receive the data from the base station
-		data = client_socket.recv(1024)
-		client_socket.close()
+		data = clientSocket.recv(1024)
+		clientSocket.close()
 
 		if not data:
 			return { "error": "No data received" }
 
 		# Data format: date time lat lng alt ...
-		decoded_data = data.decode("utf-8", errors="ignore").strip()
-		parts = decoded_data.split()
+		decodedData = data.decode("utf-8", errors="ignore").strip()
+		parts = decodedData.split()
 
 		if len(parts) >= 4:
 			return {
@@ -213,7 +211,7 @@ def get_gps_base():
 				"lng": float(parts[3])
 			}
 
-		return { "error": f"Invalid data format: {decoded_data}" }
+		return { "error": f"Invalid data format: {decodedData}" }
 
 	except socket.timeout:
 		return { "error": "Connection timed out" }
@@ -225,7 +223,7 @@ def get_gps_base():
 if __name__ == "__main__":
 	if getenv("WERKZEUG_RUN_MAIN") == "true":
 		state["comms"] = Comms()
-		state["comms"].bt.set_bt_update_callback(on_bt_update)
-		state["comms"].lora.set_lora_callback(on_lora_update)
+		state["comms"].bt.setBtUpdateCallback(onBtUpdate)
+		state["comms"].lora.setLoraCallback(onLoraUpdate)
 
 	socketio.run(app, debug=True, use_reloader=True)
